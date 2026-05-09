@@ -1,0 +1,202 @@
+/* KTestify Brand — Slate + Mint */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+/* ── Brand raw tokens (available in both themes) ── */
+:root {
+  --kt-bg:         #0C1018;
+  --kt-bg2:        #101520;
+  --kt-bg3:        #141a26;
+  --kt-border:     #1c2535;
+  --kt-mint:       #6EE7B7;
+  --kt-teal:       #2DD4BF;
+  --kt-deep-teal:  #134E4A;
+  --kt-text:       #E0F7F4;
+  --kt-text-mid:   rgba(153, 230, 210, 0.7);
+  --kt-text-muted: rgba(153, 230, 210, 0.42);
+  --kt-fail:       #EF4444;
+  --kt-warn:       #F59E0B;
+
+  /* ── Light-mode Infima overrides (darker greens for WCAG contrast on white) ── */
+  --ifm-color-primary:          #059669;
+  --ifm-color-primary-dark:     #047857;
+  --ifm-color-primary-darker:   #046c50;
+  --ifm-color-primary-darkest:  #03543f;
+  --ifm-color-primary-light:    #10b981;
+  --ifm-color-primary-lighter:  #34d399;
+  --ifm-color-primary-lightest: #6ee7b7;
+
+  /* ── Fonts ── */
+  --ifm-font-family-base:       'JetBrains Mono', monospace;
+  --ifm-font-family-monospace:  'JetBrains Mono', monospace;
+  --ifm-heading-font-family:    'Space Mono', monospace;
+
+  /* ── Misc ── */
+  --ifm-code-font-size: 93%;
+  --ifm-navbar-height:  56px;
+  --docusaurus-highlighted-code-line-bg: rgba(110, 231, 183, 0.1);
+}
+
+/* ── Dark mode — primary brand presentation ── */
+[data-theme='dark'] {
+  /* Primary scale (mint) */
+  --ifm-color-primary:          #6EE7B7;
+  --ifm-color-primary-dark:     #4DD4A0;
+  --ifm-color-primary-darker:   #3DC99A;
+  --ifm-color-primary-darkest:  #2AB085;
+  --ifm-color-primary-light:    #85EBC1;
+  --ifm-color-primary-lighter:  #95EFCA;
+  --ifm-color-primary-lightest: #ADF3D6;
+
+  /* Backgrounds */
+  --ifm-background-color:         #0C1018;
+  --ifm-background-surface-color: #101520;
+  --ifm-card-background-color:    #101520;
+
+  /* Text */
+  --ifm-font-color-base:      #E0F7F4;
+  --ifm-color-content:        #E0F7F4;
+  --ifm-color-content-secondary: rgba(153, 230, 210, 0.7);
+
+  /* Borders & dividers */
+  --ifm-toc-border-color:      #1c2535;
+  --ifm-color-emphasis-300:    #1c2535;
+  --ifm-hr-border-color:       #1c2535;
+  --ifm-table-border-color:    #1c2535;
+
+  /* Navbar */
+  --ifm-navbar-background-color:   rgba(12, 16, 24, 0.92);
+  --ifm-navbar-link-color:         rgba(153, 230, 210, 0.7);
+  --ifm-navbar-link-hover-color:   #6EE7B7;
+
+  /* Footer */
+  --ifm-footer-background-color:   #060810;
+  --ifm-footer-color:              rgba(153, 230, 210, 0.42);
+  --ifm-footer-link-color:         rgba(153, 230, 210, 0.7);
+  --ifm-footer-link-hover-color:   #6EE7B7;
+
+  /* Sidebar */
+  --ifm-menu-color:        rgba(153, 230, 210, 0.7);
+  --ifm-menu-color-active: #6EE7B7;
+  --ifm-menu-color-background-active: rgba(110, 231, 183, 0.08);
+  --ifm-menu-color-background-hover:  rgba(110, 231, 183, 0.05);
+
+  /* Code */
+  --ifm-code-background:     #141a26;
+  --prism-background-color:  #060810;
+  --docusaurus-highlighted-code-line-bg: rgba(110, 231, 183, 0.08);
+}
+
+/* ── Headings always use Space Mono ── */
+h1, h2, h3, h4, h5, h6,
+.hero__title,
+.navbar__title {
+  font-family: 'Space Mono', monospace;
+  letter-spacing: -0.3px;
+}
+
+/* ── Navbar ── */
+[data-theme='dark'] .navbar {
+  border-bottom: 1px solid var(--kt-border);
+  backdrop-filter: blur(12px);
+}
+
+/* ── Sidebar active item ── */
+[data-theme='dark'] .menu__link--active,
+[data-theme='dark'] .menu__link--active:hover {
+  color: var(--kt-mint);
+}
+
+/* ── Inline code ── */
+[data-theme='dark'] code {
+  border-color: var(--kt-border);
+  background-color: #141a26;
+  color: var(--kt-mint);
+}
+
+/* ── TOC active link ── */
+[data-theme='dark'] .table-of-contents__link--active,
+[data-theme='dark'] .table-of-contents__link--active code {
+  color: var(--kt-mint);
+}
+
+/* ── Footer ── */
+.footer {
+  font-family: 'JetBrains Mono', monospace !important;
+}
+
+[data-theme='dark'] .footer {
+  background: #060810 !important;
+  border-top: 1px solid var(--kt-border);
+}
+
+[data-theme='dark'] .footer__title {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--kt-text-muted);
+  font-weight: 700;
+}
+
+[data-theme='dark'] .footer__link-item {
+  font-size: 12px;
+  color: rgba(153, 230, 210, 0.42);
+  transition: color 0.15s ease;
+}
+
+[data-theme='dark'] .footer__link-item:hover {
+  color: var(--kt-mint);
+  text-decoration: none;
+}
+
+[data-theme='dark'] .footer__copyright {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: rgba(153, 230, 210, 0.22);
+  border-top: 1px solid var(--kt-border);
+  padding-top: 24px;
+  margin-top: 8px;
+}
+
+/* Light mode footer */
+.footer__title {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.footer__link-item {
+  font-size: 12px;
+  transition: color 0.15s ease;
+}
+
+.footer__copyright {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+/* ── Admonitions ── */
+[data-theme='dark'] .admonition {
+  background: #101520;
+  border-color: var(--kt-border);
+}
+
+/* ── Docusaurus search (Algolia) ── */
+[data-theme='dark'] .DocSearch-Button {
+  background-color: #101520;
+  border: 1px solid var(--kt-border);
+  color: var(--kt-text-muted);
+}
+
+/* ── Pagination / prev-next nav ── */
+[data-theme='dark'] .pagination-nav__link {
+  border-color: var(--kt-border);
+  background: #101520;
+}
+
+[data-theme='dark'] .pagination-nav__link:hover {
+  border-color: var(--kt-mint);
+}

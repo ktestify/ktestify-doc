@@ -1,0 +1,385 @@
+/* ── Logo animations ─────────────────────────────────────────────────────── */
+
+@keyframes ringExpand {
+  0%   { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(1.85); opacity: 0; }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.ringExpand {
+  animation: ringExpand 2.4s ease-out infinite;
+}
+
+.pulseGlow {
+  animation: pulseGlow 2.4s ease-in-out infinite;
+}
+
+/* ── Hero ────────────────────────────────────────────────────────────────── */
+
+.hero {
+  background: #0C1018;
+  border-bottom: 1px solid #1c2535;
+  padding: 108px 24px 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 82vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* subtle dot-grid background */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(28, 37, 53, 0.8) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+/* ambient mint glow */
+.hero::after {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 320px;
+  background: radial-gradient(ellipse, rgba(110, 231, 183, 0.06) 0%, transparent 68%);
+  pointer-events: none;
+}
+
+.heroInner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.heroLogo {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.wordmark {
+  font-family: 'Space Mono', monospace !important;
+  font-weight: 700 !important;
+  font-size: 64px !important;
+  letter-spacing: -1.5px !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+}
+
+.wordmarkK {
+  color: #6EE7B7;
+}
+
+.wordmarkRest {
+  color: #E0F7F4;
+}
+
+.tagline {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  color: rgba(153, 230, 210, 0.7);
+  letter-spacing: 0.04em;
+  margin: 0;
+  min-height: 1.6em;
+}
+
+.cursor {
+  color: #6EE7B7;
+  animation: blink 0.75s step-end infinite;
+}
+
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(153, 230, 210, 0.28);
+  margin: 0;
+}
+
+.heroCtas {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none !important;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btnPrimary {
+  background: #6EE7B7;
+  color: #0C1018 !important;
+  border-color: #6EE7B7;
+}
+
+.btnPrimary:hover {
+  background: #85EBC1;
+  border-color: #85EBC1;
+  color: #0C1018 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(110, 231, 183, 0.28);
+}
+
+.btnGhost {
+  background: transparent;
+  color: rgba(153, 230, 210, 0.65) !important;
+  border-color: #1c2535;
+}
+
+.btnGhost:hover {
+  border-color: rgba(110, 231, 183, 0.5);
+  color: #6EE7B7 !important;
+  transform: translateY(-1px);
+}
+
+/* ── Pitch ──────────────────────────────────────────────────────────────── */
+
+.pitch {
+  background: #0C1018;
+  padding: 80px 0;
+  border-bottom: 1px solid #1c2535;
+}
+
+.pitchLabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(153, 230, 210, 0.32);
+  margin-bottom: 16px;
+}
+
+.pitchTitle {
+  font-family: 'Space Mono', monospace !important;
+  font-size: 30px !important;
+  font-weight: 700 !important;
+  color: #E0F7F4 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.3px !important;
+  margin-bottom: 20px !important;
+}
+
+.pitchBody {
+  font-size: 15px;
+  color: rgba(153, 230, 210, 0.65);
+  max-width: 620px;
+  line-height: 1.85;
+  margin: 0;
+}
+
+/* ── Shared section helpers ─────────────────────────────────────────────── */
+
+.sectionLabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(153, 230, 210, 0.32);
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  font-family: 'Space Mono', monospace !important;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  color: #E0F7F4 !important;
+  margin-bottom: 12px !important;
+  letter-spacing: -0.3px !important;
+}
+
+.sectionDesc {
+  font-size: 14px;
+  color: rgba(153, 230, 210, 0.65);
+  max-width: 560px;
+  line-height: 1.85;
+  margin-bottom: 36px;
+}
+
+/* ── How It Works ───────────────────────────────────────────────────────── */
+
+.howItWorks {
+  background: #0C1018;
+  padding: 80px 0;
+  border-top: 1px solid #1c2535;
+}
+
+/* ── Code block ─────────────────────────────────────────────────────────── */
+
+.codeBlock {
+  background: #060810;
+  border: 1px solid #1c2535;
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 680px;
+}
+
+.codeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #101520;
+  border-bottom: 1px solid #1c2535;
+}
+
+.codeLang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(153, 230, 210, 0.28);
+}
+
+.codeFile {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgba(153, 230, 210, 0.42);
+}
+
+.codePre {
+  margin: 0 !important;
+  padding: 24px 22px !important;
+  background: transparent !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 13px !important;
+  line-height: 1.75 !important;
+  color: rgba(153, 230, 210, 0.55) !important;
+  overflow-x: auto;
+}
+
+.codePre code {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+  padding: 0 !important;
+  font-size: inherit !important;
+}
+
+/* Gherkin syntax colours */
+.ghSection {
+  color: #6EE7B7;
+  font-weight: 600;
+}
+
+.ghKeyword {
+  color: #2DD4BF;
+  font-weight: 600;
+}
+
+.ghTable {
+  color: rgba(153, 230, 210, 0.35);
+}
+
+/* ── CTA ────────────────────────────────────────────────────────────────── */
+
+.cta {
+  background: #101520;
+  border-top: 1px solid #1c2535;
+  padding: 80px 24px;
+}
+
+.ctaInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.ctaTitle {
+  font-family: 'Space Mono', monospace !important;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  color: #E0F7F4 !important;
+  letter-spacing: -0.3px !important;
+  margin: 0 !important;
+}
+
+.ctaBody {
+  font-size: 14px;
+  color: rgba(153, 230, 210, 0.65);
+  margin: 0;
+}
+
+.ctaBtns {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .hero {
+    padding: 60px 20px;
+    min-height: auto;
+  }
+
+  .heroLogo {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .wordmark {
+    font-size: 42px !important;
+  }
+
+  .tagline {
+    font-size: 15px;
+  }
+
+  .pitchTitle {
+    font-size: 22px !important;
+  }
+
+  .sectionTitle {
+    font-size: 20px !important;
+  }
+
+  .ctaTitle {
+    font-size: 20px !important;
+  }
+
+  .codeBlock {
+    max-width: 100%;
+  }
+}
+

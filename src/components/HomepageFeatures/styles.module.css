@@ -1,0 +1,107 @@
+/* ── Section ─────────────────────────────────────────────────────────────── */
+
+.features {
+  background: #101520;
+  padding: 80px 0;
+  border-top: 1px solid #1c2535;
+  border-bottom: 1px solid #1c2535;
+}
+
+.sectionLabel {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(153, 230, 210, 0.32);
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 26px;
+  font-weight: 700;
+  color: #E0F7F4;
+  margin-bottom: 40px;
+  letter-spacing: -0.3px;
+}
+
+/* ── Grid ────────────────────────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 996px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 996px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+
+.card {
+  background: #0C1018;
+  border: 1px solid #1c2535;
+  border-radius: 12px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  border-color: rgba(110, 231, 183, 0.3);
+  box-shadow: 0 4px 28px rgba(110, 231, 183, 0.05);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cardTag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgba(153, 230, 210, 0.38);
+  flex: 1;
+}
+
+.cardBadge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6EE7B7;
+  background: rgba(110, 231, 183, 0.08);
+  border: 1px solid rgba(110, 231, 183, 0.18);
+  border-radius: 4px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: #E0F7F4;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.cardDesc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: rgba(153, 230, 210, 0.6);
+  line-height: 1.75;
+  margin: 0;
+}
