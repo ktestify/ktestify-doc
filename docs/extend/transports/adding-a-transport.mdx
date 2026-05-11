@@ -1,0 +1,187 @@
+---
+sidebar_position: 2
+title: Adding a Transport
+description: New transports (IBM MQ, RabbitMQ, …) are built as KTestify plugins — a separate Maven module that plugs in at runtime.
+---
+
+# Adding a New Transport
+
+New transports in KTestify are **plugins** — self-contained Maven modules that hook into the framework at runtime without touching any existing code. This is the same model used by `ktestify-plugin-azureblob`.
+
+Before reading this page, make sure you understand the [Plugin System →](../plugins/plugin-system).
+
+---
+
+## Why the plugin model
+
+KTestify's transport layer is fully abstracted behind `RecordFetcher<V>` and `ConsumedRecord<V>`. All existing matchers (`FileRecordMatcher`, `XmlRecordMatcher`, `AvroFileRecordMatcher`, …) work on `List<ConsumedRecord<V>>` regardless of where those records came from. A new transport only needs to produce `ConsumedRecord` objects — everything else is already done.
+
+The plugin system lets you ship that new transport as a separate JAR dropped into `/workspace/plugins` at runtime — no rebuild of `ktestify-core` or `ktestify-cucumber` required.
+
+---
+
+## Step 1 — Create a Maven module
+
+```
+ktestify-plugin-ibmmq/
+├── pom.xml
+└── src/main/java/io/github/ktestify/plugin/ibmmq/
+    ├── IbmMqPlugin.java          ← implements KtestifyPlugin
+    ├── IbmMqRecordFetcher.java   ← implements RecordFetcher<V>
+    ├── IbmMqConsumerContext.java
+    └── steps/
+        └── IbmMqStepDefinitions.java  ← Cucumber step definitions
+```
+
+Your `pom.xml` declares `ktestify-core` as its only KTestify dependency:
+
+```xml
+<dependency>
+  <groupId>io.github.ktestify</groupId>
+  <artifactId>ktestify-core</artifactId>
+  <version>${ktestify.version}</version>
+</dependency>
+```
+
+---
+
+## Step 2 — Implement `RecordFetcher<V>`
+
+This is the transport contract. Wrap each incoming message as a `ConsumedRecord<V>` and throw `FetchException` on timeout or broker error:
+
+```java
+public class IbmMqRecordFetcher<V> implements RecordFetcher<V> {
+
+    private final IbmMqConsumerContext context;
+
+    @Override
+    public List<ConsumedRecord<V>> fetch() throws FetchException {
+        try {
+            Message msg = consumer.receive(context.getReadTimeoutMs());
+            if (msg == null) {
+                throw new FetchException("Timed out waiting for a message on queue '"
+                    + context.getQueueName() + "'");
+            }
+            return List.of(ConsumedRecord.<V>builder()
+                .source(context.getQueueName())
+                .partition(0)
+                .offset(0)
+                .key(msg.getJMSCorrelationID())
+                .value((V) msg.getBody(String.class))
+                .timestamp(msg.getJMSTimestamp())
+                .build());
+        } catch (JMSException e) {
+            throw new FetchException("IBM MQ error: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void close() { /* close JMS session/connection */ }
+}
+```
+
+---
+
+## Step 3 — Implement `KtestifyPlugin`
+
+Register your fetcher and any Cucumber step definitions through the plugin interface:
+
+```java
+public class IbmMqPlugin implements KtestifyPlugin {
+
+    @Override
+    public String getPluginId() { return "ibmmq"; }
+
+    @Override
+    public void initialize(PluginContext context) {
+        // read connection details from HOCON config
+        String host    = context.getConfig().getConfig().getString("ktestify.ibmmq.host");
+        int    port    = context.getConfig().getConfig().getInt("ktestify.ibmmq.port");
+        String manager = context.getConfig().getConfig().getString("ktestify.ibmmq.queue-manager");
+        // set up JMS connection factory, store on the plugin instance
+    }
+}
+```
+
+Register it in a Cucumber `@Before` hook inside your step definitions class:
+
+```java
+@Before(order = 0)
+public void registerPlugin() {
+    PluginRegistry.register(new IbmMqPlugin());
+}
+```
+
+---
+
+## Step 4 — Add Gherkin steps
+
+Create step definitions that retrieve your plugin from `PluginRegistry` and expose the Gherkin DSL:
+
+```java
+@Given("output queue")
+public void givenOutputQueue(DataTable table) {
+    // register queue in shared resources
+}
+
+@Then("expected queue record from file")
+public void thenExpectedQueueRecord(DataTable table) {
+    IbmMqPlugin plugin = (IbmMqPlugin) PluginRegistry.get("ibmmq");
+    // build IbmMqConsumerContext from table
+    // run IbmMqRecordFetcher → matcher → assert
+}
+```
+
+Resulting Gherkin:
+
+```gherkin
+Given output queue
+  | queueName    | queueAlias |
+  | MY.OUT.QUEUE | orders-out |
+
+Then expected queue record from file
+  | queueAlias | file         |
+  | orders-out | expected.txt |
+```
+
+---
+
+## Step 5 — Plugin configuration
+
+By convention, read your settings from under the `ktestify` namespace:
+
+```hocon title="application.conf"
+ktestify {
+  ibmmq {
+    host          = "mq.internal"
+    port          = 1414
+    queue-manager = "QM1"
+    channel       = "DEV.APP.SVRCONN"
+  }
+}
+```
+
+---
+
+## Step 6 — Drop the JAR into `/workspace/plugins`
+
+Build your plugin JAR and mount it into the container. KTestify scans `/workspace/plugins` at startup and loads any JARs it finds:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  -v "$(pwd)/plugins:/workspace/plugins" \
+  -e KTESTIFY_BOOTSTRAP_SERVERS=kafka:9092 \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  /workspace/features
+```
+
+No rebuild of `ktestify-cucumber` required. The plugin is discovered and its step definitions are picked up automatically by Cucumber's classpath scanning.
+
+---
+
+## See also
+
+- [Plugin System →](../plugins/plugin-system) — `KtestifyPlugin`, `PluginRegistry`, `PluginContext`
+- [Azure Blob plugin →](../plugins/azureblob) — a real example of the plugin pattern
+- [Architecture →](../architecture) — how `RecordFetcher<V>` and `ConsumedRecord<V>` keep transports isolated

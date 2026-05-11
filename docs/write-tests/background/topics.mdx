@@ -1,0 +1,82 @@
+---
+sidebar_position: 2
+title: Topics
+description: Declare input and output Kafka topics for your scenario.
+---
+
+# Topics — `Given input topic` / `Given output topic`
+
+Topics are the entry points for producers (`input`) and consumers (`output`). You must declare a topic before referencing it in `When` or `Then` steps.
+
+---
+
+## Given input topic
+
+Declares one or more Kafka topics that your test will **produce messages to**.
+
+```gherkin
+Given input topic
+  | topicName   | topicAlias  | namespace | namespaceAlias |
+  | orders-in   | orders-in   |           |                |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicName` | `string` | ✅ | Physical Kafka topic name (namespace prefixed automatically) |
+| `topicAlias` | `string` | ✅ | Short name used in `When` steps |
+| `namespace` | `string` | ❌ | Override namespace for this topic |
+| `namespaceAlias` | `string` | ❌ | Reference a named namespace declared in `Given namespaces` |
+
+---
+
+## Given output topic
+
+Declares one or more Kafka topics that your test will **consume and assert messages from**.
+
+```gherkin
+Given output topic
+  | topicName   | topicAlias  | namespace | namespaceAlias |
+  | orders-out  | enriched    | myapp     |                |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicName` | `string` | ✅ | Physical Kafka topic name (namespace prefixed automatically) |
+| `topicAlias` | `string` | ✅ | Short name used in `Then` steps |
+| `namespace` | `string` | ❌ | Override namespace for this topic |
+| `namespaceAlias` | `string` | ❌ | Reference a named namespace declared in `Given namespaces` |
+
+:::warning[Input ≠ Output]
+KTestify enforces topic type at the context level. Passing an **INPUT** topic to a `Then` step throws a `ConsumerException` immediately. This prevents accidental off-by-one topic confusion.
+:::
+
+---
+
+## Multiple topics in one declaration
+
+You can declare multiple topics in one step by adding extra DataTable rows:
+
+```gherkin
+Given output topic
+  | topicName   | topicAlias |
+  | orders-out  | orders     |
+  | audit-out   | audit      |
+```
+
+---
+
+## Typical background
+
+```gherkin
+Background:
+  Given namespace
+    | namespace |
+    | myapp     |
+  Given input topic
+    | topicName | topicAlias |
+    | orders-in | orders-in  |
+  Given output topic
+    | topicName  | topicAlias |
+    | orders-out | orders-out |
+```
+

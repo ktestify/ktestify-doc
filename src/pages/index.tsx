@@ -5,6 +5,7 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
+import {SiGithub} from '@icons-pack/react-simple-icons';
 
 import styles from './index.module.css';
 
@@ -108,13 +109,13 @@ function HeroSection(): ReactNode {
           </h1>
         </div>
         <TypewriterTagline />
-        <p className={styles.eyebrow}>Kafka Streams · Integration Testing · Gherkin DSL</p>
         <div className={styles.heroCtas}>
           <Link className={clsx(styles.btn, styles.btnPrimary)} to="/docs/intro">
             Get Started
           </Link>
           <Link className={clsx(styles.btn, styles.btnGhost)} to="https://github.com/ktestify">
-            GitHub →
+            <SiGithub size={14} />
+            GitHub
           </Link>
         </div>
       </div>
@@ -134,8 +135,10 @@ function PitchSection(): ReactNode {
         </h2>
         <p className={styles.pitchBody}>
           KTestify is a modular, open-source framework for testing Apache Kafka data pipelines.
-          It gives teams a clean Gherkin DSL to produce messages, consume from output topics, and
-          assert record content, all that without writing a single line of Kafka client code.
+          At its core sits a transport-agnostic engine — today powering a Cucumber/Gherkin adapter
+          that lets teams produce messages, consume from output topics, and assert record content in
+          plain English. Tomorrow, the same core will drive other test engines and integrations,
+          all without touching a single line of Kafka client code.
         </p>
       </div>
     </section>
@@ -242,7 +245,8 @@ function CtaSection(): ReactNode {
               Read the docs
             </Link>
             <Link className={clsx(styles.btn, styles.btnGhost)} to="https://github.com/ktestify">
-              View on GitHub →
+              <SiGithub size={14} />
+              View on GitHub
             </Link>
           </div>
         </div>

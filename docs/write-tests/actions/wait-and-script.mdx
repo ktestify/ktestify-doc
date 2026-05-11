@@ -1,0 +1,62 @@
+---
+sidebar_position: 3
+title: Wait & Script
+description: Add a fixed delay between steps or execute a shell script.
+---
+
+# Wait & Execute Script
+
+## `And wait for {int} seconds`
+
+Pauses test execution for a fixed number of seconds. Useful when your pipeline has a known processing lag and you want to give it time before asserting output.
+
+```gherkin
+And wait for 5 seconds
+```
+
+:::caution[Prefer timeout tuning]
+Hard waits make tests slow and brittle. Where possible, use [`consumerReadTimeout`](../advanced/timeout-tuning) in your assertion step instead.
+:::
+
+---
+
+## `When script is executed`
+
+Executes a shell or any shebang-compatible script as part of your test scenario. KTestify reads the script's shebang line to determine the interpreter and runs it via `ProcessBuilder`, inheriting stdout/stderr.
+
+```gherkin
+When script is executed
+  | scriptPath          | scriptArgs     |
+  | ./scripts/reset.sh  | arg1,arg2,arg3 |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `scriptPath` | `string` | ✅ | Path to the script file (absolute or relative to working directory) |
+| `scriptArgs` | `string` | ❌ | Comma-separated argument list passed to the script |
+
+The step **fails** if the script exits with a non-zero exit code.
+
+### Example — trigger a downstream reset before consuming
+
+```gherkin
+Scenario: Processed orders appear after reset
+  When script is executed
+    | scriptPath             |
+    | ./scripts/reset-app.sh |
+  And wait for 2 seconds
+  Then expected record from file
+    | topicAlias | file          |
+    | orders-out | expected.json |
+```
+
+### Also available as `And execute script`
+
+```gherkin
+And execute script
+  | scriptPath   | scriptArgs    |
+  | ./check.sh   | param1,param2 |
+```
+
+This form is syntactically identical — `When` vs `And` is Gherkin convention only.
+

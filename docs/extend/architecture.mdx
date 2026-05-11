@@ -1,0 +1,183 @@
+---
+sidebar_position: 1
+title: Architecture
+description: KTestify's three-layer architecture — Transport, Orchestration, and Assertion — and why it matters.
+---
+
+# Architecture
+
+KTestify is built on a strict **three-layer separation of concerns**. Each layer has one job and knows nothing about the other layers' implementation details.
+
+```mermaid
+---
+config:
+  layout: elk
+---
+flowchart LR
+    subgraph TRANSPORT
+        A[KafkaRecordFetcher]
+    end
+
+    subgraph ORCHESTRATION
+        B[AbstractKafkaConsumer]
+        C[RawKafkaConsumer]
+        D[AvroKafkaConsumer]
+    end
+
+    subgraph ASSERTION
+        E[RecordMatcher&lt;V&gt;]
+        F[FileRecordMatcher]
+        G[XmlRecordMatcher]
+        H[AvroFileRecordMatcher]
+    end
+
+    A -->|List&lt;ConsumedRecord&gt;| B
+    B --> C
+    B --> D
+    B -->|List&lt;ConsumedRecord&gt;| E
+    E --> F
+    E --> G
+    E --> H
+
+    classDef transport fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef orchestration fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef assertion fill:#FAC775,stroke:#854F0B,color:#412402
+
+    class A transport
+    class B,C,D orchestration
+    class E,F,G,H assertion
+```
+
+**`ConsumedRecord<V>` is the only data type that crosses layer boundaries.**
+
+---
+
+## Layer responsibilities
+
+### Transport — `RecordFetcher<V>`
+
+Knows: Kafka broker, partitions, offsets, deduplication.
+Does NOT know: matchers, files, test frameworks.
+
+The contract is a single interface:
+
+```java
+public interface RecordFetcher<V> extends AutoCloseable {
+    List<ConsumedRecord<V>> fetch() throws FetchException;
+    void close();
+}
+```
+
+Swapping Kafka for IBM MQ means writing a new `IbmMqRecordFetcher<V>` — nothing else changes.
+
+---
+
+### Orchestration — `AbstractKafkaConsumer`
+
+Knows: fetch → match → result wiring.
+Does NOT know: Kafka internals, comparison algorithms.
+
+```java
+// AbstractKafkaConsumer.call() — simplified
+var fetcher = new KafkaRecordFetcher(context);
+try {
+    List<ConsumedRecord<V>> records = fetcher.fetch();      // transport
+    MatchContext matchCtx = buildMatchContext();
+    MatchResult result = matcher.match(records, matchCtx);  // assertion
+    return result.isPassed();
+} catch (FetchException e) {
+    throw new ConsumerException(e.getMessage(), e);
+} finally {
+    fetcher.close();
+}
+```
+
+---
+
+### Assertion — `RecordMatcher<V>`
+
+Knows: `ConsumedRecord`, expected values, comparison algorithm.
+Does NOT know: Kafka, IBM MQ, any transport.
+
+```java
+@FunctionalInterface
+public interface RecordMatcher<V> {
+    MatchResult match(List<ConsumedRecord<V>> records, MatchContext context);
+}
+```
+
+---
+
+## Module boundaries
+
+```
+ktestify-core                      ktestify-cucumber
+───────────────────────────────    ──────────────────────────────────
+RecordFetcher<V>                   BackgroundStepDefinition
+KafkaRecordFetcher              ◄──────── ConsumerContext (config only)
+AbstractKafkaConsumer              ValidationStepDefinition
+RecordMatcher<V>                   ConsumerValidationService
+MatchContext / MatchResult
+ConsumedRecord<V>
+```
+
+**`ktestify-cucumber` must never import `org.apache.kafka.*`**.
+It uses `ConsumerContext` / `ProducerContext` (ktestify-core abstractions) to configure the engine and receives only `ConsumedRecord<V>` back.
+
+---
+
+## Class hierarchy
+```mermaid
+---
+config:
+  layout: elk
+---
+flowchart TD
+    A["Callable&lt;Boolean&gt;"]
+    B["AbstractConsumer"]
+    C["AbstractKafkaConsumer&lt;K, V&gt;"]
+    D["RawKafkaConsumer\nK=String, V=String"]
+    E["AvroKafkaConsumer\nK=String, V=GenericRecord"]
+
+    A --> B --> C --> D
+    C --> E
+
+    F(["RecordFetcher&lt;V&gt; · interface"])
+    G["KafkaRecordFetcher&lt;K, V&gt;"]
+    F --> G
+
+    classDef abstract fill:#EEEDFE,stroke:#534AB7,color:#3C3489
+    classDef concrete fill:#E1F5EE,stroke:#0F6E56,color:#085041
+    classDef iface fill:#FAC775,stroke:#854F0B,color:#412402
+
+    class A,B,C abstract
+    class D,E,G concrete
+    class F iface
+
+```
+
+### Matchers hierarchy
+
+```
+RecordMatcher<V>  (@FunctionalInterface)
+├── NoOpRecordMatcher<V>
+├── FileRecordMatcher
+├── XmlRecordMatcher
+├── XPathRecordMatcher
+├── FieldsRecordMatcher
+├── FileKeyRecordMatcher
+├── KeyRecordMatcher
+├── AvroFileRecordMatcher
+├── AvroFileKeyRecordMatcher
+├── AvroFieldsRecordMatcher
+└── AvroKeyRecordMatcher
+```
+---
+
+## See also
+
+- [Core concepts →](core-concepts)
+- [Transports — Kafka →](transports/kafka)
+- [Adding a transport →](transports/adding-a-transport)
+- [Built-in matchers →](matchers/built-in-matchers)
+

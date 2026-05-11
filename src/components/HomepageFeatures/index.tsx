@@ -1,4 +1,7 @@
 import type {ReactNode} from 'react';
+import Link from '@docusaurus/Link';
+import {SiCucumber} from '@icons-pack/react-simple-icons';
+import {ArrowUpRight} from 'lucide-react';
 import styles from './styles.module.css';
 
 // ── Feature icons ─────────────────────────────────────────────────────────────
@@ -23,16 +26,9 @@ function CoreIcon(): ReactNode {
 
 function CucumberIcon(): ReactNode {
   return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="rgba(110,231,183,0.07)" stroke="#1c2535" strokeWidth="1" />
-      <rect x="7" y="9" width="18" height="2" rx="1" fill="#134E4A" />
-      <rect x="7" y="13.5" width="13" height="2" rx="1" fill="#6EE7B7" />
-      <rect x="7" y="18" width="16" height="2" rx="1" fill="#134E4A" />
-      <rect x="7" y="22.5" width="10" height="2" rx="1" fill="#6EE7B7" />
-      <rect x="9" y="11" width="2" height="2" rx="0.5" fill="#2DD4BF" />
-      <rect x="9" y="15.5" width="2" height="2" rx="0.5" fill="#2DD4BF" />
-      <rect x="9" y="20" width="2" height="2" rx="0.5" fill="#2DD4BF" />
-    </svg>
+    <div className={styles.cucumberIcon}>
+      <SiCucumber size={20} color="#23D96C" />
+    </div>
   );
 }
 
@@ -57,6 +53,7 @@ type Feature = {
   tag: string;
   title: string;
   description: string;
+  href: string;
   badge?: string;
 };
 
@@ -67,6 +64,7 @@ const features: Feature[] = [
     title: 'Transport-agnostic engine',
     description:
       'A pure Java library with producer and consumer abstractions, pluggable record matchers (JSON, XML, XPath, Avro), dynamic variable injection, and a HOCON-based configuration system.',
+    href: 'https://github.com/ktestify/ktestify-core',
   },
   {
     icon: <CucumberIcon />,
@@ -74,6 +72,7 @@ const features: Feature[] = [
     title: 'Gherkin-native test runner',
     description:
       'A standalone Cucumber adapter with DataTable-driven step definitions for topics, namespaces, schemas, and scripts. Write integration tests in plain English — no Kafka client code required.',
+    href: 'https://github.com/ktestify/ktestify-cucumber',
   },
   {
     icon: <PluginIcon />,
@@ -81,23 +80,25 @@ const features: Feature[] = [
     title: 'Azure Blob plugin',
     description:
       'Extend your test scenarios with Azure Blob Storage steps. Upload files, validate blob contents, and chain blob checks with Kafka assertions — all from the same feature file.',
+    href: 'https://github.com/ktestify/ktestify-plugin-azureblob',
     badge: 'Plugin',
   },
 ];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-function FeatureCard({icon, tag, title, description, badge}: Feature): ReactNode {
+function FeatureCard({icon, tag, title, description, href, badge}: Feature): ReactNode {
   return (
-    <div className={styles.card}>
+    <Link href={href} className={styles.card} target="_blank" rel="noopener noreferrer">
       <div className={styles.cardHeader}>
         {icon}
         <span className={styles.cardTag}>{tag}</span>
         {badge && <span className={styles.cardBadge}>{badge}</span>}
+        <ArrowUpRight size={14} className={styles.cardExternalIcon} />
       </div>
       <h3 className={styles.cardTitle}>{title}</h3>
       <p className={styles.cardDesc}>{description}</p>
-    </div>
+    </Link>
   );
 }
 

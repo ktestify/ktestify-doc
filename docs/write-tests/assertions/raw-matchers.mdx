@@ -1,0 +1,86 @@
+---
+sidebar_position: 1
+title: Raw Matchers
+description: Assert raw (String/JSON/text) Kafka records against files or positional fields.
+---
+
+# Raw Record Assertions
+
+Raw matchers compare String-serialised Kafka record values against an expected file or positional field range. These steps apply to topics declared as raw (non-Avro).
+
+---
+
+## File match — `Then expected record from file`
+
+Fetches the next record from the output topic and asserts its value matches the content of an expected file character-for-character (with coloured diff on failure).
+
+```gherkin
+Then expected record from file
+  | topicAlias | file            | expectedRecordKey | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | expected.json   | order-001         | 30                  | 60                |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Alias of a declared output topic |
+| `file` | `string` | ✅ | — | Expected file path, relative to assets directory |
+| `expectedRecordKey` | `string` | ❌ | — | Filter: only accept records with this exact key |
+| `consumerReadTimeout` | `integer` | ❌ | From config (30s) | Max seconds to wait for a record |
+| `consumerDeltaTime` | `integer` | ❌ | From config (60s) | How far back (seconds) to seek before consuming |
+
+---
+
+## Key + value match — `Then expected record with key and value from file`
+
+Asserts both the record **key** and **value** match the content of an expected file.
+
+```gherkin
+Then expected record with key and value from file
+  | topicAlias | file            | consumerReadTimeout |
+  | orders-out | expected.json   | 30                  |
+```
+
+The expected file must contain the key on the first line and the value starting from the second line (same format as `FileKeyRecordMatcher`).
+
+---
+
+## Positional fields — `Then expected record should have fields matching from file`
+
+Asserts a specific character range within a specific line of the record value.
+
+```gherkin
+Then expected record should have fields matching from file
+  | topicAlias | file          | line | from | to |
+  | orders-out | expected.txt  | 2    | 0    | 15 |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicAlias` | `string` | ✅ | Alias of a declared output topic |
+| `file` | `string` | ✅ | Expected file path |
+| `line` | `integer` | ✅ | 1-based line number in the record value |
+| `from` | `integer` | ✅ | Start character index (inclusive) |
+| `to` | `integer` | ✅ | End character index (exclusive) |
+
+---
+
+## Record key match — `Then expected record should match key`
+
+Asserts only the **record key** (value is ignored).
+
+```gherkin
+Then expected record should match key
+  | topicAlias | expectedRecordKey | consumerReadTimeout |
+  | orders-out | order-001         | 30                  |
+```
+
+---
+
+## See also
+
+- [XML matchers →](xml-matchers)
+- [Avro matchers →](avro-matchers)
+- [Batch assertions →](batch-assertions)
+- [Watcher →](watcher)
+- [Timeout tuning →](../advanced/timeout-tuning)
+

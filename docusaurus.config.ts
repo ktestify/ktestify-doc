@@ -8,7 +8,7 @@ const config: Config = {
   title: 'KTestify',
   tagline: 'Assert the stream. Own the pipeline.',
   favicon: 'img/favicon.ico',
-
+  themes: ['@docusaurus/theme-mermaid'],
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
@@ -35,32 +35,19 @@ const config: Config = {
     locales: ['en'],
   },
 
+  markdown: {
+    mermaid: true,
+  },
+
   presets: [
     [
       'classic',
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/ktestify/ktestify-doc/tree/main/',
+          editUrl: 'https://github.com/ktestify/ktestify-doc/tree/main/',
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/ktestify/ktestify-doc/tree/main/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -78,17 +65,28 @@ const config: Config = {
     navbar: {
       title: 'KTestify',
       logo: {
-        alt: 'My Site Logo',
+        alt: 'KTestify Logo',
         src: 'img/logo.svg',
       },
       items: [
         {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          to: '/docs/intro',
+          label: 'Docs',
           position: 'left',
-          label: 'Tutorial',
+          activeBaseRegex: '/docs/(intro|getting-started)',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
+        {
+          to: '/docs/write-tests/overview',
+          label: 'Write Tests',
+          position: 'left',
+          activeBaseRegex: '/docs/write-tests',
+        },
+        {
+          to: '/docs/extend/architecture',
+          label: 'Extend',
+          position: 'left',
+          activeBaseRegex: '/docs/extend',
+        },
         {
           href: 'https://github.com/ktestify/',
           label: 'GitHub',
@@ -102,10 +100,11 @@ const config: Config = {
         {
           title: 'Docs',
           items: [
-            {
-              label: 'Get Started',
-              to: '/docs/intro',
-            },
+            {label: 'Introduction', to: '/docs/intro'},
+            {label: 'Getting Started', to: '/docs/getting-started/installation'},
+            {label: 'Write Tests', to: '/docs/write-tests/overview'},
+            {label: 'Extend the Framework', to: '/docs/extend/architecture'},
+            {label: 'Step Reference', to: '/docs/write-tests/step-reference'},
           ],
         },
         {
@@ -148,8 +147,19 @@ const config: Config = {
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.vsDark,
+      additionalLanguages: ['java', 'bash', 'gherkin', 'yaml', 'json'],
     },
+    // Algolia DocSearch — apply at https://docsearch.algolia.com/apply/
+    // Uncomment and fill in your credentials once approved.
+     algolia: {
+       appId: '5344CTZ4OP',
+       apiKey: 'aa9495d3aa2daf2a733a0c66914ec052',
+       indexName: 'KTestify Documentation',
+       contextualSearch: true,
+     },
   } satisfies Preset.ThemeConfig,
+
+
 };
 
 export default config;

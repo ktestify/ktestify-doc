@@ -1,0 +1,400 @@
+---
+sidebar_position: 9
+title: Step Reference
+description: Complete reference of every KTestify Gherkin step with all DataTable columns, types, defaults, and examples.
+---
+
+# Step Reference
+
+Complete catalogue of every KTestify step. All DataTable columns are listed with their type, whether they are required, the default value (if any), and an inline example.
+
+---
+
+## Background — `Given` steps
+
+### `Given namespace`
+
+Declares a single namespace prefix applied to all topic names.
+
+```gherkin
+Given namespace
+  | namespace |
+  | myapp     |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `namespace` | `string` | ✅ | — | Namespace prefix (e.g. `myapp`, `com.example`) |
+
+---
+
+### `Given namespaces`
+
+Declares multiple named namespace prefixes.
+
+```gherkin
+Given namespaces
+  | namespace   | namespaceAlias |
+  | myapp.input | input-ns       |
+  | myapp.audit | audit-ns       |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `namespace` | `string` | ✅ | — | Namespace prefix |
+| `namespaceAlias` | `string` | ✅ | — | Alias referenced in topic declarations |
+
+---
+
+### `Given input topic`
+
+Declares one or more Kafka topics as **producers** (INPUT type).
+
+```gherkin
+Given input topic
+  | topicName  | topicAlias | namespace | namespaceAlias |
+  | orders-in  | orders-in  |           |                |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicName` | `string` | ✅ | — | Physical topic name (namespace prepended) |
+| `topicAlias` | `string` | ✅ | — | Alias for use in `When` steps |
+| `namespace` | `string` | ❌ | Config default | Override namespace for this topic |
+| `namespaceAlias` | `string` | ❌ | — | Reference a `Given namespaces` alias |
+
+---
+
+### `Given output topic`
+
+Declares one or more Kafka topics as **consumers** (OUTPUT type).
+
+```gherkin
+Given output topic
+  | topicName   | topicAlias | namespace | namespaceAlias |
+  | orders-out  | enriched   | myapp     |                |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicName` | `string` | ✅ | — | Physical topic name (namespace prepended) |
+| `topicAlias` | `string` | ✅ | — | Alias for use in `Then` steps |
+| `namespace` | `string` | ❌ | Config default | Override namespace for this topic |
+| `namespaceAlias` | `string` | ❌ | — | Reference a `Given namespaces` alias |
+
+---
+
+### `Given assets directory`
+
+Sets the base directory for all relative file paths in the scenario.
+
+```gherkin
+Given assets directory
+  | absolutePath              |
+  | src/test/resources/assets |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `absolutePath` | `string` | ✅ | `KTESTIFY_ASSETS_DIR` / config | Absolute or project-relative path |
+
+---
+
+### `Given schema`
+
+Declares an Avro schema for use in Avro producer/consumer steps.
+
+```gherkin
+Given schema
+  | schemaName | schemaAlias | schemaVersion |
+  | Order      | order       | 1             |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `schemaName` | `string` | ✅ | — | Schema Registry subject name (prefix for `schemaName-value`) |
+| `schemaAlias` | `string` | ✅ | — | Short alias |
+| `schemaVersion` | `integer` | ❌ | latest | Schema version to use |
+
+---
+
+## Actions — `When` steps
+
+### `When record from file is sent`
+
+Produces a raw String message to a Kafka input topic.
+
+```gherkin
+When record from file is sent
+  | topicName | file         | recordKey | headerFile        |
+  | orders-in | payload.json | key-001   | headers.json      |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicName` | `string` | ✅ | — | Topic name or alias (must be declared as INPUT) |
+| `file` | `string` | ✅ | — | Payload file, relative to assets directory |
+| `recordKey` | `string` | ❌ | `null` | Kafka record key |
+| `headerFile` | `string` | ❌ | — | JSON file of Kafka headers `{"name":"value"}` |
+
+---
+
+### `When record from file based on schema is sent`
+
+Produces an Avro-serialised message.
+
+```gherkin
+When record from file based on schema is sent
+  | topicName | file       | schemaName | recordKey |
+  | orders-in | order.json | Order      | ord-001   |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicName` | `string` | ✅ | — | Input topic name or alias |
+| `file` | `string` | ✅ | — | JSON payload file |
+| `schemaName` | `string` | ❌ | TopicNameStrategy | Schema alias or name declared via `Given schema` |
+| `recordKey` | `string` | ❌ | `null` | Kafka record key |
+
+---
+
+### `And wait for {int} seconds`
+
+Pauses execution.
+
+```gherkin
+And wait for 5 seconds
+```
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `{int}` | `integer` | ✅ | Seconds to pause |
+
+---
+
+### `When script is executed` / `And execute script`
+
+Runs a shell script.
+
+```gherkin
+When script is executed
+  | scriptPath          | scriptArgs     |
+  | ./scripts/reset.sh  | arg1,arg2      |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `scriptPath` | `string` | ✅ | — | Path to the script file |
+| `scriptArgs` | `string` | ❌ | — | Comma-separated arguments |
+
+Fails if exit code ≠ 0.
+
+---
+
+## Assertions — `Then` / `And` steps
+
+### `Then expected record from file`
+
+Raw file match — full value equality.
+
+```gherkin
+Then expected record from file
+  | topicAlias | file          | expectedRecordKey | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | expected.json | key-001           | 30                  | 60                |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `file` | `string` | ✅ | — | Expected file path |
+| `expectedRecordKey` | `string` | ❌ | — | Filter by record key |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+---
+
+### `Then expected record should have fields matching from file`
+
+Positional character field match.
+
+```gherkin
+Then expected record should have fields matching from file
+  | topicAlias | file         | line | from | to |
+  | orders-out | expected.txt | 2    | 0    | 15 |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `file` | `string` | ✅ | — | Expected file |
+| `line` | `integer` | ✅ | — | 1-based line number |
+| `from` | `integer` | ✅ | — | Start char index (inclusive) |
+| `to` | `integer` | ✅ | — | End char index (exclusive) |
+
+---
+
+### `Then expected record from file based on XML`
+
+Structural XML comparison with optional element exclusions.
+
+```gherkin
+Then expected record from file based on XML
+  | topicAlias | file         | excludedElements    | expectedRecordKey |
+  | orders-out | expected.xml | ns:CreationDateTime |                   |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `file` | `string` | ✅ | — | Expected XML file |
+| `excludedElements` | `string` | ❌ | — | Comma-separated element names to skip |
+| `expectedRecordKey` | `string` | ❌ | — | Filter by record key |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+---
+
+### `Then expected record based on XML should have fields matching from file`
+
+XPath extraction + comparison.
+
+```gherkin
+Then expected record based on XML should have fields matching from file
+  | topicAlias | file         | xpathExpressions                              |
+  | orders-out | expected.txt | //Weight[@unit='KG']/text(),//Sender/ID/text() |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `file` | `string` | ✅ | — | Expected values file (one per line) |
+| `xpathExpressions` | `string` | ✅ | — | Comma-separated XPath expressions |
+
+---
+
+### `Then expected record from file based on schema`
+
+Avro → JSON file match with optional field exclusions.
+
+```gherkin
+Then expected record from file based on schema
+  | topicAlias | file          | excludedKeys      | expectedRecordKey | consumerReadTimeout |
+  | orders-out | expected.json | createdAt,eventId | ord-001           | 30                  |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `file` | `string` | ✅ | — | Expected JSON file |
+| `excludedKeys` | `string` | ❌ | — | Comma-separated Avro field names to exclude |
+| `expectedRecordKey` | `string` | ❌ | — | Filter by record key |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+---
+
+### `Then expected record based on schema should have fields matching from given value`
+
+Assert specific Avro field values without a file.
+
+```gherkin
+Then expected record based on schema should have fields matching from given value
+  | topicAlias | key    | value     |
+  | orders-out | status | PROCESSED |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `key` | `string` | ✅ | — | Avro field name |
+| `value` | `string` | ✅ | — | Expected field value |
+
+---
+
+### `Then expected records from files`
+
+Raw batch — collect N records and match positionally against N files.
+
+```gherkin
+Then expected records from files
+  | topicAlias | expectedRecordsCount | files                              | consumerReadTimeout |
+  | orders-out | 3                    | f1.json,f2.json,f3.json            | 60                  |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `expectedRecordsCount` | `integer` | ✅ | — | Exact number of records to collect |
+| `files` | `string` | ✅ | — | Comma-separated expected file paths |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait for all records |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+---
+
+### `Then expected records from files based on schema`
+
+Avro batch — collect N Avro records and match positionally.
+
+```gherkin
+Then expected records from files based on schema
+  | topicAlias | expectedRecordsCount | files                 | excludedKeys | consumerReadTimeout |
+  | orders-out | 2                    | exp-1.json,exp-2.json | ts,eventId   | 60                  |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `expectedRecordsCount` | `integer` | ✅ | — | Exact number of records to collect |
+| `files` | `string` | ✅ | — | Comma-separated expected JSON file paths |
+| `excludedKeys` | `string` | ❌ | — | Avro field names to exclude from all records |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait for all records |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+---
+
+### `And record should appear in topic`
+
+Positive watcher — asserts at least one record is present.
+
+```gherkin
+And record should appear in topic
+  | topicAlias | topicType | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | raw       | 15                  | 60                |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` | `string` | ✅ | — | Output topic alias |
+| `topicType` | `string` | ✅ | — | `raw` or `avro` |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+---
+
+### `And record should not appear in topic`
+
+Negative watcher — asserts no record appears within the timeout.
+
+```gherkin
+And record should not appear in topic
+  | topicAlias | topicType | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | raw       | 10                  | 30                |
+```
+
+Same columns as `record should appear in topic`.
+
+---
+
+## Matcher × Topic type compatibility
+
+| Matcher step | `raw` topics | `avro` topics |
+|---|---|---|
+| `expected record from file` | ✅ | ❌ use `based on schema` |
+| `expected record from file based on XML` | ✅ | ❌ not available |
+| `expected record based on XML / XPath` | ✅ | ❌ not available |
+| `expected record from file based on schema` | ❌ | ✅ |
+| `expected record based on schema / field value` | ❌ | ✅ |
+| `expected records from files` (batch) | ✅ | ❌ |
+| `expected records from files based on schema` (batch) | ❌ | ✅ |
+| `record should (not) appear in topic` | ✅ both | ✅ both |
+

@@ -1,0 +1,75 @@
+---
+sidebar_position: 2
+title: XML Matchers
+description: Assert XML Kafka records with structural comparison and optional element exclusion, or XPath expressions.
+---
+
+# XML Assertions
+
+XML matchers perform a **structural** XML comparison (element order is irrelevant) with optional exclusion of specific elements. An XPath variant lets you pinpoint specific values.
+
+---
+
+## Structural XML match — `Then expected record from file based on XML`
+
+Fetches a record and compares its value as XML. Attribute order, whitespace, and element order are normalised before comparison.
+
+```gherkin
+Then expected record from file based on XML
+  | topicAlias | file         | excludedElements        | expectedRecordKey |
+  | orders-out | expected.xml | ns:CreationDateTime     |                   |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicAlias` | `string` | ✅ | Alias of a declared output topic |
+| `file` | `string` | ✅ | Expected XML file path, relative to assets directory |
+| `excludedElements` | `string` | ❌ | Comma-separated list of XML element names or XPath expressions to ignore during comparison |
+| `expectedRecordKey` | `string` | ❌ | Filter: only accept records with this exact key |
+| `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait for a record |
+| `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
+
+### Excluding elements
+
+The `excludedElements` column accepts comma-separated element names (with or without namespace prefix):
+
+```gherkin
+| excludedElements                        |
+| CreationDateTime,MessageId,ns2:Checksum |
+```
+
+Elements listed here are removed from both the expected and actual XML before comparison.
+
+---
+
+## XPath match — `Then expected record based on XML should have fields matching from file`
+
+Extracts one or more values from the record using XPath expressions and compares them against the corresponding expected file content line-by-line.
+
+```gherkin
+Then expected record based on XML should have fields matching from file
+  | topicAlias | file         | xpathExpressions                                |
+  | orders-out | expected.xml | //Weight[@unit='KG']/text(),//Sender/ID/text()  |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicAlias` | `string` | ✅ | Alias of a declared output topic |
+| `file` | `string` | ✅ | Expected values file — one expected value per line matching the XPath order |
+| `xpathExpressions` | `string` | ✅ | Comma-separated XPath expressions |
+
+### Expected file format for XPath
+
+When using multiple XPath expressions, the expected file contains one value per line, in the same order as the expressions:
+
+```text title="assets/expected-xpath.txt"
+42.5
+SENDER-001
+```
+
+---
+
+:::info[Avro + XML]
+XML matchers are **not available** for Avro topics. Use [Avro matchers →](avro-matchers) for Avro-serialised records.
+:::
+

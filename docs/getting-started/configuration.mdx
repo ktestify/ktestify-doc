@@ -1,0 +1,279 @@
+---
+sidebar_position: 4
+title: Configuration
+description: Every HOCON key, environment variable, and default value available in KTestify.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Configuration
+
+KTestify uses [Typesafe Config (HOCON)](https://github.com/lightbend/config). Values are resolved in this priority order (highest first):
+
+```
+System properties     -Dktestify.kafka.bootstrap-servers=...
+       ↓
+Environment variables  KTESTIFY_BOOTSTRAP_SERVERS=...
+       ↓
+application.conf      your project's override file
+       ↓
+reference.conf        ktestify-core built-in defaults
+```
+
+---
+
+## Pointing to your config file
+
+Pass an `application.conf` to the container via `--config`:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  -v "$(pwd)/workspace/config:/workspace/config" \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  --config /workspace/config/application.conf \
+  /workspace/features
+```
+
+Or set it as an environment variable:
+
+```bash
+-e KTESTIFY_CONFIG_FILE=/workspace/config/application.conf
+```
+
+---
+
+## Minimal config
+
+The only two keys you must set for a basic raw-JSON test run:
+
+```hocon title="application.conf"
+ktestify {
+  kafka {
+    bootstrap-servers = "kafka:9092"
+    topic-namespace   = "myapp"
+  }
+}
+```
+
+For Avro tests, also add:
+
+```hocon
+  schema-registry {
+    url = "http://schema-registry:8081"
+  }
+```
+
+---
+
+## Full reference
+
+### Kafka
+
+| HOCON key | Environment variable | Default | Description |
+|---|---|---|---|
+| `ktestify.kafka.bootstrap-servers` | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Comma-separated list of Kafka broker addresses |
+| `ktestify.kafka.topic-namespace` | `KTESTIFY_TOPIC_NAMESPACE` | `""` | Prepended to every topic name as `namespace.topicName`. Leave blank for no prefix. Can be overridden per-scenario with `Given namespace`. |
+| `ktestify.kafka.security-protocol` | `KAFKA_SECURITY_PROTOCOL` | `PLAINTEXT` | Connection security: `PLAINTEXT`, `SSL`, `SASL_PLAINTEXT`, `SASL_SSL` |
+
+#### Consumer
+
+| HOCON key | Environment variable | Default | Description |
+|---|---|---|---|
+| `ktestify.kafka.consumer.group-id` | `KAFKA_CONSUMER_GROUP_ID` | `ktestify-consumer-group` | Kafka consumer group ID |
+| `ktestify.kafka.consumer.enable-auto-commit` | — | `false` | Auto-commit offsets. Keep `false` — KTestify manages offsets manually. |
+| `ktestify.kafka.consumer.auto-offset-reset` | — | `earliest` | What to do when no offset exists: `earliest` or `latest` |
+| `ktestify.kafka.consumer.session-timeout` | — | `30s` | Kafka consumer session timeout |
+| `ktestify.kafka.consumer.heartbeat-interval` | — | `10s` | Heartbeat interval (must be < `session-timeout / 3`) |
+| `ktestify.kafka.consumer.max-poll-records` | — | `500` | Max records returned per `poll()` call |
+| `ktestify.kafka.consumer.key-deserializer` | — | `StringDeserializer` | Key deserializer class (fully qualified) |
+| `ktestify.kafka.consumer.value-deserializer` | — | `StringDeserializer` | Value deserializer class. Avro consumers override this automatically. |
+
+#### Producer
+
+| HOCON key | Default | Description |
+|---|---|---|
+| `ktestify.kafka.producer.acks` | `all` | Acknowledgement level: `0`, `1`, `all` |
+| `ktestify.kafka.producer.retries` | `3` | Number of retries on transient send failure |
+| `ktestify.kafka.producer.batch-size` | `16384` | Producer batch size in bytes |
+| `ktestify.kafka.producer.linger-ms` | `1ms` | How long to wait for additional records before sending a batch |
+| `ktestify.kafka.producer.buffer-memory` | `33554432` | Total bytes of memory the producer can use for buffering (32 MB) |
+| `ktestify.kafka.producer.key-serializer` | `StringSerializer` | Key serializer class |
+| `ktestify.kafka.producer.value-serializer` | `StringSerializer` | Value serializer class. Avro producers override this automatically. |
+
+#### Security (SSL / SASL)
+
+| HOCON key | Environment variable | Default | Description |
+|---|---|---|---|
+| `ktestify.kafka.security.sasl-mechanism` | `KAFKA_SASL_MECHANISM` | `""` | SASL mechanism: `PLAIN`, `SCRAM-SHA-256`, `SCRAM-SHA-512`, `OAUTHBEARER` |
+| `ktestify.kafka.security.sasl-jaas-config` | `KAFKA_SASL_JAAS_CONFIG` | `""` | Full JAAS config string |
+| `ktestify.kafka.security.ssl-truststore-location` | `KAFKA_SSL_TRUSTSTORE_LOCATION` | `""` | Path to SSL truststore file |
+| `ktestify.kafka.security.ssl-truststore-password` | `KAFKA_SSL_TRUSTSTORE_PASSWORD` | `""` | Truststore password |
+| `ktestify.kafka.security.ssl-keystore-location` | `KAFKA_SSL_KEYSTORE_LOCATION` | `""` | Path to SSL keystore file (mutual TLS) |
+| `ktestify.kafka.security.ssl-keystore-password` | `KAFKA_SSL_KEYSTORE_PASSWORD` | `""` | Keystore password |
+| `ktestify.kafka.security.ssl-key-password` | `KAFKA_SSL_KEY_PASSWORD` | `""` | Private key password |
+
+---
+
+### Schema Registry
+
+| HOCON key | Environment variable | Default | Description |
+|---|---|---|---|
+| `ktestify.schema-registry.url` | `SCHEMA_REGISTRY_URL` | `http://localhost:8081` | Schema Registry base URL |
+| `ktestify.schema-registry.cache-capacity` | — | `50` | Number of schemas to cache in memory |
+| `ktestify.schema-registry.auto-register-schemas` | — | `true` | Automatically register new schemas when producing Avro |
+| `ktestify.schema-registry.compatibility-level` | — | `BACKWARD` | Schema compatibility level: `NONE`, `BACKWARD`, `FORWARD`, `FULL` |
+| `ktestify.schema-registry.auth.basic-auth-credentials-source` | `SCHEMA_REGISTRY_BASIC_AUTH_CREDENTIALS_SOURCE` | `""` | Credentials source: `USER_INFO`, `URL`, `SASL_INHERIT` |
+| `ktestify.schema-registry.auth.basic-auth-user-info` | `SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO` | `""` | Credentials in `username:password` format |
+| `ktestify.schema-registry.ssl.truststore-location` | `SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION` | `""` | Path to SSL truststore for Schema Registry |
+| `ktestify.schema-registry.ssl.truststore-password` | `SCHEMA_REGISTRY_SSL_TRUSTSTORE_PASSWORD` | `""` | Truststore password |
+| `ktestify.schema-registry.ssl.keystore-location` | `SCHEMA_REGISTRY_SSL_KEYSTORE_LOCATION` | `""` | Path to SSL keystore for Schema Registry |
+| `ktestify.schema-registry.ssl.keystore-password` | `SCHEMA_REGISTRY_SSL_KEYSTORE_PASSWORD` | `""` | Keystore password |
+
+---
+
+### Timeouts
+
+:::note[Default overrides]
+`ktestify-cucumber` ships with longer defaults than `ktestify-core` to suit end-to-end test scenarios. The values below reflect the effective defaults when running the Docker image.
+:::
+
+| HOCON key | Environment variable | Core default | Cucumber default | Description |
+|---|---|---|---|---|
+| `ktestify.framework.timeouts.default-read-timeout` | `KTESTIFY_DEFAULT_READ_TIMEOUT` | `10s` | **`30s`** | How long to wait for a matching record on the output topic |
+| `ktestify.framework.timeouts.consumer-delta-time` | `KTESTIFY_CONSUMER_DELTA_TIME` | `20s` | **`60s`** | How far back in time to seek before consuming (`now − delta`) |
+| `ktestify.framework.timeouts.poll-interval` | — | `100ms` | `100ms` | Kafka poll loop interval |
+| `ktestify.framework.timeouts.buffer-time` | — | `5s` | `5s` | Safety buffer added to the outer `ExecutorService` timeout on top of `default-read-timeout` |
+
+Both `default-read-timeout` and `consumer-delta-time` can be overridden **per scenario** in the validation step DataTable (values in **seconds**):
+
+```gherkin
+Then expected record from file
+  | topicAlias | file          | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | expected.json | 60                  | 120               |
+```
+
+---
+
+### Directories
+
+| HOCON key | Environment variable | Default | Description |
+|---|---|---|---|
+| `ktestify.framework.directories.assets` | `KTESTIFY_ASSETS_DIR` | `""` | Base directory for payload and expected files. Can be set per-scenario with `Given assets directory`. |
+| `ktestify.framework.directories.output` | `KTESTIFY_OUTPUT_DIR` | `""` | Directory for test output files |
+
+---
+
+### Execution
+
+| HOCON key | Environment variable | Default | Description |
+|---|---|---|---|
+| `ktestify.framework.execution.snapshot-mode` | `KTESTIFY_SNAPSHOT_MODE` | `false` | When `true`, updates expected files instead of asserting against them |
+| `ktestify.framework.execution.strict-matching` | — | `true` | Fail on any mismatch. Always `false` internally in KTestify's matchers — not user-configurable at this time. |
+| `ktestify.framework.execution.max-retries` | — | `3` | Maximum retries for transient failures |
+
+---
+
+### Logging
+
+| HOCON key | Environment variable | Default | Description |
+|---|---|---|---|
+| `ktestify.logging.level` | `KTESTIFY_LOG_LEVEL` | `DEBUG` | Log level for `io.github.ktestify.*` (the framework itself) |
+| `ktestify.logging.root-level` | `KTESTIFY_ROOT_LOG_LEVEL` | `INFO` | Root logger level (all other classes) |
+| `ktestify.logging.kafka-level` | `KTESTIFY_KAFKA_LOG_LEVEL` | `WARN` | Log level for Apache Kafka client libraries |
+| `ktestify.logging.confluent-level` | `KTESTIFY_CONFLUENT_LOG_LEVEL` | `WARN` | Log level for Confluent Schema Registry / Avro libraries |
+| `ktestify.logging.testcontainers-level` | `KTESTIFY_TC_LOG_LEVEL` | `INFO` | Log level for Testcontainers (only relevant during internal test development) |
+
+---
+
+## Common patterns
+
+<Tabs>
+  <TabItem value="plaintext" label="Plaintext (no auth)">
+
+```hocon title="application.conf"
+ktestify {
+  kafka {
+    bootstrap-servers = "kafka:9092"
+    topic-namespace   = "myapp"
+  }
+  framework {
+    timeouts {
+      default-read-timeout = 45s
+      consumer-delta-time  = 90s
+    }
+    directories {
+      assets = "/workspace/features"
+    }
+  }
+}
+```
+
+  </TabItem>
+  <TabItem value="sasl" label="SASL_SSL (MSK / Confluent Cloud)">
+
+```hocon title="application.conf"
+ktestify {
+  kafka {
+    bootstrap-servers  = "pkc-xxxxx.eu-west-1.aws.confluent.cloud:9092"
+    topic-namespace    = "myapp"
+    security-protocol  = "SASL_SSL"
+    security {
+      sasl-mechanism   = "PLAIN"
+      sasl-jaas-config = "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"<API_KEY>\" password=\"<API_SECRET>\";"
+    }
+  }
+  schema-registry {
+    url = "https://psrc-xxxxx.eu-central-1.aws.confluent.cloud"
+    auth {
+      basic-auth-credentials-source = "USER_INFO"
+      basic-auth-user-info          = "<SR_KEY>:<SR_SECRET>"
+    }
+  }
+}
+```
+
+  </TabItem>
+  <TabItem value="mtls" label="Mutual TLS">
+
+```hocon title="application.conf"
+ktestify {
+  kafka {
+    bootstrap-servers  = "kafka:9093"
+    security-protocol  = "SSL"
+    security {
+      ssl-truststore-location = "/workspace/config/truststore.jks"
+      ssl-truststore-password = "changeit"
+      ssl-keystore-location   = "/workspace/config/keystore.jks"
+      ssl-keystore-password   = "changeit"
+      ssl-key-password        = "changeit"
+    }
+  }
+}
+```
+
+  </TabItem>
+  <TabItem value="envonly" label="Environment variables only">
+
+No config file needed — pass everything via `-e` flags:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  -e KAFKA_BOOTSTRAP_SERVERS=kafka:9092 \
+  -e KTESTIFY_TOPIC_NAMESPACE=myapp \
+  -e SCHEMA_REGISTRY_URL=http://schema-registry:8081 \
+  -e KAFKA_SECURITY_PROTOCOL=SASL_SSL \
+  -e KAFKA_SASL_MECHANISM=PLAIN \
+  -e KAFKA_SASL_JAAS_CONFIG="org.apache.kafka.common.security.plain.PlainLoginModule required username=\"key\" password=\"secret\";" \
+  -e SCHEMA_REGISTRY_BASIC_AUTH_CREDENTIALS_SOURCE=USER_INFO \
+  -e SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO=key:secret \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  /workspace/features
+```
+
+  </TabItem>
+</Tabs>
+
+

@@ -1,0 +1,143 @@
+---
+sidebar_position: 2
+title: Core Concepts
+description: Key domain types in ktestify-core — ConsumedRecord, MatchContext, MatchResult, ConsumerContext, and more.
+---
+
+# Core Concepts
+
+## `ConsumedRecord<V>`
+
+The **only** data type that crosses layer boundaries. It is the universal output of the transport layer and the universal input of the assertion layer.
+
+```java
+@Value
+public class ConsumedRecord<V> {
+    String  source;        // topic name
+    int     partition;
+    long    offset;
+    String  key;
+    V       value;         // String for raw, GenericRecord for Avro
+    long    timestamp;
+    Headers headers;
+
+    static <V> ConsumedRecord<V> fromKafkaRecord(ConsumerRecord<String, V> record) { ... }
+    MatchedRecord toMatchedRecord() { ... }
+}
+```
+
+---
+
+## `MatchedRecord`
+
+Deduplication token — represents a record that has already been claimed by a consumer step. It holds `topic + partition + offset + key + timestamp` and is stored in the static deduplication registry.
+
+`MatchedRecord` deliberately **excludes `processedTime`** from `equals`/`hashCode` so that two records from the same Kafka partition+offset are always considered the same, regardless of when they were processed.
+
+---
+
+## `MatchContext`
+
+Immutable context object passed to a `RecordMatcher`. Built by `AbstractKafkaConsumer.buildMatchContext()` from the `ConsumerContext`.
+
+```java
+@Value @Builder
+public class MatchContext {
+    String        matchMethod;
+    List<String>  matchFilePaths;    // replaces old matchFilePath (String)
+    List<String>  excludedFields;    // defaults to emptyList()
+    boolean       strictMatching;
+    String        matchKey;
+    String        matchValue;
+
+    // Convenience — for single-record matchers
+    public String getMatchFilePath() {
+        return matchFilePaths != null && !matchFilePaths.isEmpty()
+            ? matchFilePaths.get(0) : null;
+    }
+}
+```
+
+---
+
+## `MatchResult`
+
+Returned by every `RecordMatcher`. Carries a pass/fail flag plus the diff, expected, and actual strings for failure reporting.
+
+```java
+@Value
+public class MatchResult {
+    boolean passed;
+    String  diff;
+    String  expected;
+    String  actual;
+
+    static MatchResult pass()  { ... }
+    static MatchResult fail(String diff, String expected, String actual) { ... }
+}
+```
+
+---
+
+## `ConsumerContext<K, V>`
+
+Immutable builder that configures a consumer operation. Built by `ConsumerValidationService` in `ktestify-cucumber` from DataTable values.
+
+Key fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `topic` | `Topic` | The output topic (must be OUTPUT type — validated in builder) |
+| `matchMethod` | `String` | One of the `ConfigConstants.method*` values |
+| `matchFilePaths` | `List<String>` | Expected file paths (single or batch) |
+| `excludedFields` | `List<String>` | Field names to ignore in comparison |
+| `expectedRecordKey` | `String` | Key filter — record must match this key |
+| `readTimeout` | `long` | Milliseconds |
+| `consumerDeltaTime` | `long` | Milliseconds (DataTable seconds × 1000) |
+| `isBatchConsumer` | `boolean` | Enables batch fetch mode |
+| `batchSize` | `int` | Number of records to collect in batch mode |
+
+---
+
+## `Topic`
+
+```java
+@Data @Builder
+public class Topic {
+    String     topicName;
+    String     topicAlias;
+    String     topicNamespace;
+    Topic.Type topicType;          // INPUT or OUTPUT
+
+    // Returns "namespace.topicName" or just "topicName" if no namespace
+    String getNamespacedTopic() { ... }
+}
+```
+
+---
+
+## `RecordMatcherFactory`
+
+Pure static factory — no DI, no singleton. Resolves the right `RecordMatcher` implementation based on `matchMethod` and whether the consumer is raw or Avro.
+
+```java
+RecordMatcherFactory.forRaw("matchFile")   → FileRecordMatcher
+RecordMatcherFactory.forAvro("matchFile")  → AvroFileRecordMatcher
+RecordMatcherFactory.forRaw("matchXML")    → XmlRecordMatcher
+RecordMatcherFactory.forAvro("matchXML")   → throws ConsumerException  ← not supported
+```
+
+See [Built-in matchers →](matchers/built-in-matchers) for the full mapping table.
+
+---
+
+## Dynamic variable system
+
+All file reads go through `FileUtils.getFileContent(path)`, which transparently calls `DynamicVariableProcessor.process(content)` before returning. To add a new variable type:
+
+1. Implement `DynamicVariable` interface.
+2. Register it in `DynamicVariableFactory`.
+3. No changes needed to `FileUtils` or `DynamicVariableProcessor`.
+
+See [Dynamic variables →](../write-tests/dynamic-variables) for the full list of built-in types.
+

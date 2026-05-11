@@ -1,0 +1,215 @@
+---
+sidebar_position: 1
+title: Installation
+description: Pull the KTestify Docker image and run your first test.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Installation
+
+KTestify ships as a **Docker image**. There is nothing to compile or install — pull the image and point it at your features.
+
+```bash
+docker pull ghcr.io/ktestify/ktestify-cucumber:latest
+```
+
+The image supports `linux/amd64` and `linux/arm64`.
+
+---
+
+## What you need
+
+- A **dedicated Kafka cluster** for testing — not shared, not production. [Why this matters →](ci-environment)
+- A **Git repository** that holds your `.feature` files and asset payloads — this is your test project (see layout below). Your CI pipeline checks it out and mounts it into the container.
+- Optionally, a Confluent Schema Registry if you use Avro topics.
+
+---
+
+## Project layout
+
+Your features and assets live in a **dedicated Git repository** — your test project. Keep it separate from your application code so it can evolve independently and be checked out by any CI agent.
+
+The recommended structure inside that repository:
+
+```
+my-ktestify-tests/                  ← your Git repository root
+└── workspace/
+    └── features/
+        └── order-processing/           ← one folder per feature set
+            ├── order-processing.feature
+            └── assets/                 ← payloads + expected files live right next to the feature
+                ├── order.json
+                └── order-enriched.json
+```
+
+> Co-locating assets with their feature makes each test self-contained — everything a scenario needs is in one place.
+
+Your CI pipeline checks out this repository and mounts `workspace/` into the container at `/workspace`.
+
+---
+
+## Configuration file
+
+Create an `application.conf` (HOCON) that points to your dedicated test environment:
+
+```hocon title="application.conf"
+ktestify {
+  kafka {
+    bootstrap-servers = "kafka:9092"
+    topic-namespace   = "myapp"
+  }
+  schema-registry {
+    url = "http://schema-registry:8081"
+  }
+  framework {
+    timeouts {
+      default-read-timeout = 30s
+    }
+  }
+}
+```
+
+All values can be overridden by environment variables — see [Configuration →](../write-tests/configuration).
+
+---
+
+## Running the container
+
+<Tabs>
+  <TabItem value="envvars" label="Environment variables">
+
+Minimal run — pass Kafka coordinates as env vars:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  -v "$(pwd)/workspace/reports:/workspace/reports" \
+  -e KTESTIFY_BOOTSTRAP_SERVERS=kafka:9092 \
+  -e KTESTIFY_TOPIC_NAMESPACE=myapp \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  /workspace/features
+```
+
+  </TabItem>
+  <TabItem value="configfile" label="Config file">
+
+Mount your `application.conf` alongside features and pass it with `--config`:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  -v "$(pwd)/workspace/config:/workspace/config" \
+  -v "$(pwd)/workspace/reports:/workspace/reports" \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  --config /workspace/config/application.conf \
+  /workspace/features
+```
+
+  </TabItem>
+  <TabItem value="tags" label="Filtered by tag">
+
+Run only scenarios tagged `@smoke`:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  -v "$(pwd)/workspace/reports:/workspace/reports" \
+  -e KTESTIFY_BOOTSTRAP_SERVERS=kafka:9092 \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  /workspace/features \
+  --tags "@smoke"
+```
+
+  </TabItem>
+</Tabs>
+
+The container exits with code `0` (all scenarios passed) or non-zero (failures) — suitable for use directly as a CI step.
+
+---
+
+## CI examples
+
+The preferred way to run KTestify is on a **scheduled daily pipeline** so regressions are caught before they reach production. See [CI environment →](ci-environment) for the full architecture.
+
+<Tabs>
+  <TabItem value="gitlab" label="GitLab CI">
+
+GitLab CI runners can execute Docker commands via the Docker executor or Docker-in-Docker. The repository is automatically checked out into `$CI_PROJECT_DIR`.
+
+```yaml title=".gitlab-ci.yml"
+regression-tests:
+  stage: test
+  image: docker:27
+  services:
+    - docker:27-dind
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'   # nightly schedule
+    - if: '$CI_PIPELINE_SOURCE == "push"'        # also on every push
+  script:
+    - docker run --rm
+        -v "$CI_PROJECT_DIR/workspace/features:/workspace/features"
+        -v "$CI_PROJECT_DIR/workspace/reports:/workspace/reports"
+        -e KTESTIFY_BOOTSTRAP_SERVERS="$TEST_KAFKA_BROKERS"
+        -e KTESTIFY_TOPIC_NAMESPACE="$KTESTIFY_TOPIC_NAMESPACE"
+        -e KTESTIFY_SCHEMA_REGISTRY_URL="$TEST_SCHEMA_REGISTRY_URL"
+        ghcr.io/ktestify/ktestify-cucumber:latest
+        /workspace/features
+  artifacts:
+    when: always
+    paths:
+      - workspace/reports/
+```
+
+Set `TEST_KAFKA_BROKERS`, `TEST_SCHEMA_REGISTRY_URL`, and `KTESTIFY_TOPIC_NAMESPACE` as CI/CD variables in your project settings.
+
+  </TabItem>
+  <TabItem value="github" label="GitHub Actions">
+
+GitHub Actions runners have Docker available out of the box on `ubuntu-latest`.
+
+```yaml title=".github/workflows/regression.yml"
+name: Nightly Regression
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # daily at 06:00 UTC
+  push:
+    branches: [main]
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run KTestify
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/workspace/features:/workspace/features" \
+            -v "${{ github.workspace }}/workspace/reports:/workspace/reports" \
+            -e KTESTIFY_BOOTSTRAP_SERVERS="${{ secrets.TEST_KAFKA_BROKERS }}" \
+            -e KTESTIFY_TOPIC_NAMESPACE=myapp \
+            -e KTESTIFY_SCHEMA_REGISTRY_URL="${{ secrets.TEST_SCHEMA_REGISTRY_URL }}" \
+            ghcr.io/ktestify/ktestify-cucumber:latest \
+            /workspace/features
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-reports
+          path: workspace/reports/
+```
+
+  </TabItem>
+</Tabs>
+
+---
+
+## Next steps
+
+- 🚀 [Quick start →](quick-start) — write your first feature file
+- ⚠️ [CI environment →](ci-environment) — why a dedicated test environment is non-negotiable
+- ⚙️ [Configuration →](../write-tests/configuration) — all HOCON keys and environment variable overrides
