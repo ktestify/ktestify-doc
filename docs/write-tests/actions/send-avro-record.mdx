@@ -51,8 +51,6 @@ KTestify resolves the Avro schema in this order:
 1. If `schemaName` is set → looks up subject `schemaName-value` in Schema Registry.
 2. If `schemaName` is empty → uses TopicNameStrategy: `namespace.topicName-value`.
 
-Make sure the schema is registered before running the test (the [local Docker stack](../../getting-started/local-stack) pre-registers sample schemas via `init-topics.sh`).
-
 ---
 
 ## Prerequisites
