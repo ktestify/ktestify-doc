@@ -1,0 +1,100 @@
+---
+sidebar_position: 7
+title: Dynamic Variables
+description: Inject dates, timestamps, UUIDs, and environment variables into payload and expected files at runtime.
+---
+
+# Dynamic Variables
+
+KTestify processes **dynamic variable placeholders** in file content before sending or comparing. This lets you inject runtime values (current date, random IDs, environment-specific data) into your test payloads and expected files without hardcoding them.
+
+All file reads go through `FileUtils.getFileContent()`, which transparently resolves placeholders before returning content.
+
+---
+
+## Syntax
+
+Placeholders use the form `{{TYPE:format}}` or `{{TYPE}}`:
+
+```json
+{
+  "orderId":   "{{RANDOM:UUID}}",
+  "createdAt": "{{DATE:yyyy-MM-dd}}",
+  "updatedAt": "{{TIMESTAMP:epoch}}",
+  "envUser":   "{{ENV:CI_USER}}"
+}
+```
+
+---
+
+## Available variable types
+
+### `{{DATE:format}}`
+
+Current local date formatted with [`DateTimeFormatter`](https://docs.oracle.com/en/java/docs/java/time/format/DateTimeFormatter.html).
+
+| Example | Output |
+|---|---|
+| `{{DATE:yyyy-MM-dd}}` | `2026-05-09` |
+| `{{DATE:dd/MM/yyyy}}` | `09/05/2026` |
+| `{{DATE:yyyyMMdd}}` | `20260509` |
+
+---
+
+### `{{TIMESTAMP:format}}`
+
+Current UTC timestamp.
+
+| Example | Output |
+|---|---|
+| `{{TIMESTAMP:epoch}}` | `1746748800000` (milliseconds since epoch) |
+| `{{TIMESTAMP:yyyy-MM-dd'T'HH:mm:ss'Z'}}` | `2026-05-09T10:00:00Z` |
+
+---
+
+### `{{RANDOM:type}}`
+
+Generates a random value.
+
+| Example | Output |
+|---|---|
+| `{{RANDOM:UUID}}` | `f47ac10b-58cc-4372-a567-0e02b2c3d479` |
+| `{{RANDOM:INT}}` | Random integer |
+
+---
+
+### `{{ENV:VARIABLE_NAME}}`
+
+Reads a value from an environment variable at test runtime.
+
+```json
+{
+  "targetHost": "{{ENV:TARGET_HOST}}",
+  "apiKey":     "{{ENV:API_KEY}}"
+}
+```
+
+If the environment variable is not set, the placeholder is left as-is (no error is thrown). Use this to parameterise tests across CI environments.
+
+---
+
+## Using dynamic variables in expected files
+
+Dynamic variables work in **expected** files too, so you can assert against a computed value:
+
+```json title="assets/expected/order-enriched.json"
+{
+  "orderId":   "order-001",
+  "processedAt": "{{DATE:yyyy-MM-dd}}",
+  "status":    "PROCESSED"
+}
+```
+
+This means the assertion is date-aware without you having to update the file daily.
+
+---
+
+## Custom dynamic variables
+
+To add your own variable type, implement `DynamicVariable` in `ktestify-core` and register it via `DynamicVariableFactory`. See [Extend → Core concepts →](../extend/core-concepts) for details.
+

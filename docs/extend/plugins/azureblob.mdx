@@ -1,0 +1,100 @@
+---
+sidebar_position: 2
+title: Azure Blob Plugin
+description: ktestify-plugin-azureblob — upload and validate files in Azure Blob Storage as part of your Kafka test scenarios.
+---
+
+# Azure Blob Storage Plugin
+
+`ktestify-plugin-azureblob` is a KTestify plugin that adds Azure Blob Storage steps to your Cucumber scenarios. It allows you to upload blobs as test fixtures or assert that a blob was produced by your pipeline.
+
+:::caution[Work in progress]
+This plugin is actively being built. The API surface, step wording, and configuration keys documented here reflect the current implementation and may change before the first stable release.
+:::
+
+---
+
+## Maven dependency
+
+```xml
+<dependency>
+  <groupId>io.github.ktestify</groupId>
+  <artifactId>ktestify-plugin-azureblob</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <scope>test</scope>
+</dependency>
+```
+
+---
+
+## Configuration
+
+```hocon
+ktestify {
+  azureblob {
+    connection-string = "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
+    # Or use individual settings:
+    # account-name = "myaccount"
+    # account-key  = "..."
+  }
+}
+```
+
+---
+
+## Gherkin steps (planned)
+
+### Background
+
+```gherkin
+Given Azure Blob container
+  | containerName | containerAlias |
+  | test-output   | blobs          |
+```
+
+### Action
+
+```gherkin
+When blob from file is uploaded
+  | containerAlias | blobName    | file            |
+  | blobs          | order.json  | payload.json    |
+```
+
+### Assertion
+
+```gherkin
+Then expected blob from file
+  | containerAlias | blobName      | file            |
+  | blobs          | output.json   | expected.json   |
+```
+
+---
+
+## Implementation structure
+
+```
+ktestify-plugin-azureblob/
+└── src/main/java/io/github/ktestify/azureblob/
+    ├── AzureBlobPlugin.java              ← KtestifyPlugin impl
+    ├── config/
+    │   └── AzureBlobConfig.java          ← reads HOCON config
+    ├── entities/
+    │   └── KtestifyBlobContainer.java    ← container entity
+    ├── io/
+    │   └── AzureBlobClient.java          ← Azure SDK wrapper
+    ├── services/
+    │   ├── AzureBlobUploadService.java
+    │   └── AzureBlobValidationService.java
+    └── steps/
+        ├── AzureBlobBackgroundSteps.java
+        ├── AzureBlobActionSteps.java
+        ├── AzureBlobValidationSteps.java
+        └── SharedAzureBlobResources.java
+```
+
+---
+
+## Tracking
+
+Follow progress and contribute at [ktestify-plugin-azureblob on GitHub](https://github.com/ktestify/ktestify-plugin-azureblob).
+

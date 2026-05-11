@@ -1,0 +1,76 @@
+---
+sidebar_position: 2
+title: Batch Testing
+description: How to configure and debug batch consumer scenarios in KTestify.
+---
+
+# Batch Testing
+
+KTestify supports a **batch consumer mode** where a single assertion step collects a configurable number of records before running assertions. This is useful for pipelines that produce multiple output records from a single input (fan-out) or for asserting ordering guarantees.
+
+---
+
+## How batch mode works
+
+When `expectedRecordsCount > 1` in a batch step, `KafkaRecordFetcher` switches to batch mode:
+
+1. Polls continuously until `batchSize` (= `expectedRecordsCount`) records have been collected.
+2. Applies deduplication — no two steps in the same scenario can match the same physical record (topic + partition + offset).
+3. If the timeout expires before enough records are collected, fails with:
+   > `Timed out after Nms waiting for 4 record(s) — only 2 collected.`
+
+---
+
+## Using batch steps
+
+### Raw batch
+
+```gherkin
+Then expected records from files
+  | topicAlias | expectedRecordsCount | files                              | consumerReadTimeout |
+  | orders-out | 3                    | order-1.json,order-2.json,order-3.json | 60              |
+```
+
+### Avro batch
+
+```gherkin
+Then expected records from files based on schema
+  | topicAlias | expectedRecordsCount | files                 | excludedKeys | consumerReadTimeout |
+  | orders-out | 2                    | exp-1.json,exp-2.json | ts           | 60                  |
+```
+
+---
+
+## Positional matching
+
+Records and files are matched **by position** in the order they are fetched from Kafka. If you have multiple partitions, delivery order is not guaranteed.
+
+**For order-sensitive batch tests:** use a single-partition topic, or filter by `expectedRecordKey` in individual steps.
+
+---
+
+## Deduplication across steps
+
+The deduplication registry (`KafkaRecordFetcher.MATCHED_RECORDS`) is a static `ConcurrentHashSet` shared across all consumer instances within the same JVM run. It is cleared in the `@Before` hook at the start of each scenario.
+
+This means:
+- One step cannot accidentally consume a record that was already matched by a previous step in the **same scenario**.
+- Records from a **previous scenario** are always cleared — no bleed-through.
+
+---
+
+## Recommended topic setup for batch tests
+
+```
+docker/init-topics.sh creates:  ktestify.raw-batch  (3 partitions, 1 replication factor)
+```
+
+Single-partition topics give deterministic ordering. Three-partition topics test ordering-agnostic scenarios.
+
+---
+
+## See also
+
+- [Batch assertions →](../assertions/batch-assertions)
+- [Timeout tuning →](timeout-tuning)
+

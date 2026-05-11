@@ -1,0 +1,119 @@
+---
+sidebar_position: 2
+title: Quick Start
+description: Write and run your first KTestify integration test.
+---
+
+# Quick Start
+
+:::info[Prerequisites]
+You need a **dedicated Kafka environment** for testing — a broker (and optionally a Schema Registry) that is not shared with any other team or application. Read [CI environment →](ci-environment) if you haven't set one up yet.
+:::
+
+---
+
+## 1. Create your test repository
+
+Your features and assets live in a **dedicated Git repository** — separate from your application code. This is your test project; your CI pipeline checks it out to run KTestify.
+
+Inside that repository, each feature set gets its own folder with its assets right next to it:
+
+```
+my-ktestify-tests/                  ← Git repository root
+└── workspace/
+    └── features/
+        └── order-processing/
+            ├── order-processing.feature
+            └── assets/
+                ├── order.json            ← input payload (sent to Kafka)
+                └── order-enriched.json   ← expected output (asserted from Kafka)
+```
+
+Your CI pipeline checks out this repository and mounts `workspace/` into the container at `/workspace`.
+
+---
+
+## 2. Write your payloads
+
+**`workspace/features/order-processing/assets/order.json`**
+```json
+{
+  "orderId": "order-001",
+  "product": "Widget A",
+  "quantity": 3
+}
+```
+
+**`workspace/features/order-processing/assets/order-enriched.json`**
+```json
+{
+  "orderId": "order-001",
+  "product": "Widget A",
+  "quantity": 3,
+  "status": "PROCESSED"
+}
+```
+
+---
+
+## 3. Write the feature file
+
+**`workspace/features/order-processing/order-processing.feature`**
+
+```gherkin
+Feature: Order processing pipeline
+
+  Background:
+    Given namespace
+      | namespace |
+      | myapp     |
+    Given input topic
+      | topicName | topicAlias |
+      | orders-in | orders-in  |
+    Given output topic
+      | topicName  | topicAlias  |
+      | orders-out | orders-out  |
+    Given assets directory
+      | absolutePath                                       |
+      | /workspace/features/order-processing/assets        |
+
+  Scenario: Order is enriched with PROCESSED status
+    When record from file is sent
+      | topicName | file        | recordKey |
+      | orders-in | order.json  | order-001 |
+    Then expected record from file
+      | topicAlias | file                | expectedRecordKey |
+      | orders-out | order-enriched.json | order-001         |
+```
+
+---
+
+## 4. Run KTestify
+
+Clone your test repository, then run the container with the workspace mounted:
+
+```bash
+# From the root of your test repository (my-ktestify-tests/)
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  -v "$(pwd)/workspace/reports:/workspace/reports" \
+  -e KTESTIFY_BOOTSTRAP_SERVERS=kafka:9092 \
+  -e KTESTIFY_TOPIC_NAMESPACE=myapp \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  /workspace/features
+```
+
+KTestify will:
+1. Send `order.json` to topic `myapp.orders-in` with key `order-001`
+2. Wait for a matching record on `myapp.orders-out`
+3. Compare it against `order-enriched.json`
+4. Exit `0` if the assertion passes, non-zero otherwise
+
+---
+
+## Next steps
+
+- 📖 [Step reference →](../write-tests/step-reference) — every step and every DataTable column
+- ⚙️ [Configuration →](../write-tests/configuration) — HOCON keys and environment variable overrides
+- 🔄 [Dynamic variables →](../write-tests/dynamic-variables) — inject dates, UUIDs, env vars into payloads
+- ⚠️ [CI environment →](ci-environment) — scheduling daily regression tests

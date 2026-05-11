@@ -1,0 +1,131 @@
+---
+sidebar_position: 1
+title: Plugin System
+description: How the KTestify plugin system works — KtestifyPlugin, PluginRegistry, and PluginContext.
+---
+
+# Plugin System
+
+KTestify includes a lightweight plugin system in `ktestify-core` that allows optional extensions to be registered and discovered at runtime without hard-coding dependencies.
+
+---
+
+## Core types
+
+### `KtestifyPlugin`
+
+The plugin interface. Every plugin must implement it:
+
+```java
+package io.github.ktestify.plugin;
+
+public interface KtestifyPlugin {
+    /** Unique plugin identifier (e.g. "azureblob", "s3", "sftp") */
+    String getPluginId();
+
+    /** Called once when the plugin is registered */
+    void initialize(PluginContext context);
+}
+```
+
+---
+
+### `PluginContext`
+
+Passed to `initialize()`. Gives the plugin access to the framework configuration:
+
+```java
+package io.github.ktestify.plugin;
+
+public class PluginContext {
+    private final KtestifyConfig config;
+
+    public KtestifyConfig getConfig() { return config; }
+}
+```
+
+---
+
+### `PluginRegistry`
+
+Singleton registry. Plugins register themselves (typically via `@Before` hook or static initialiser) and can be retrieved by ID:
+
+```java
+package io.github.ktestify.plugin;
+
+public class PluginRegistry {
+    public static void register(KtestifyPlugin plugin) { ... }
+    public static KtestifyPlugin get(String pluginId) { ... }
+    public static boolean isRegistered(String pluginId) { ... }
+}
+```
+
+---
+
+## Writing a plugin
+
+### 1. Implement `KtestifyPlugin`
+
+```java
+public class S3Plugin implements KtestifyPlugin {
+
+    @Override
+    public String getPluginId() { return "s3"; }
+
+    @Override
+    public void initialize(PluginContext context) {
+        String bucket = context.getConfig()
+            .getConfig().getString("ktestify.s3.bucket");
+        // set up S3 client, etc.
+    }
+}
+```
+
+### 2. Register at startup
+
+In a Cucumber `@Before` hook (or a static initialiser):
+
+```java
+@Before(order = 0)
+public void registerPlugins() {
+    PluginRegistry.register(new S3Plugin());
+}
+```
+
+### 3. Add Gherkin steps
+
+Create step definition classes that retrieve the plugin from `PluginRegistry` and delegate to your plugin's services:
+
+```java
+@Given("S3 bucket")
+public void givenS3Bucket(DataTable table) {
+    S3Plugin plugin = (S3Plugin) PluginRegistry.get("s3");
+    // use plugin to register bucket in shared resources
+}
+```
+
+---
+
+## Plugin configuration
+
+By convention, plugins read their configuration from under the `ktestify` namespace in HOCON:
+
+```hocon
+ktestify {
+  s3 {
+    bucket = "my-test-bucket"
+    region = "eu-west-1"
+  }
+}
+```
+
+---
+
+## Available plugins
+
+| Plugin | Artifact | Status |
+|---|---|---|
+| Azure Blob Storage | `ktestify-plugin-azureblob` | 🚧 In progress — see [Azure Blob →](azureblob) |
+| S3 | — | 💡 Planned |
+| SFTP | — | 💡 Planned |
+

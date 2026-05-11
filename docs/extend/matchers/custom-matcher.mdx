@@ -1,0 +1,107 @@
+---
+sidebar_position: 2
+title: Custom Matcher
+description: How to implement and register your own RecordMatcher<V> in ktestify-core.
+---
+
+# Writing a Custom Matcher
+
+`RecordMatcher<V>` is a `@FunctionalInterface` — implementing one is straightforward. You can add custom comparison logic (schema-based validation, regex, binary format, etc.) without touching any existing code.
+
+---
+
+## Implement `RecordMatcher<V>`
+
+```java
+package io.github.ktestify.match.impl;
+
+import io.github.ktestify.match.MatchContext;
+import io.github.ktestify.match.MatchResult;
+import io.github.ktestify.match.RecordMatcher;
+import io.github.ktestify.models.ConsumedRecord;
+
+import java.util.List;
+
+public class RegexRecordMatcher implements RecordMatcher<String> {
+
+    @Override
+    public MatchResult match(List<ConsumedRecord<String>> records, MatchContext context) {
+        if (records.isEmpty()) {
+            return MatchResult.fail("No records received", context.getMatchValue(), "");
+        }
+
+        String value = records.get(0).getValue();
+        String pattern = context.getMatchValue();    // regex stored in matchValue
+
+        if (value.matches(pattern)) {
+            return MatchResult.pass();
+        }
+
+        return MatchResult.fail(
+            "Value did not match regex",
+            pattern,
+            value
+        );
+    }
+}
+```
+
+---
+
+## Register in `RecordMatcherFactory`
+
+Add your method name constant to `ConfigConstants`:
+
+```java
+// ConfigConstants.java
+public static final String METHOD_MATCH_REGEX = "matchRegex";
+```
+
+Then add a branch in `RecordMatcherFactory.forRaw()`:
+
+```java
+// RecordMatcherFactory.java
+public static RecordMatcher<String> forRaw(String matchMethod) {
+    return switch (matchMethod) {
+        // ...existing cases...
+        case ConfigConstants.METHOD_MATCH_REGEX -> new RegexRecordMatcher();
+        default -> new NoOpRecordMatcher<>();
+    };
+}
+```
+
+---
+
+## Use it from a Gherkin step
+
+The simplest integration is to add a new `Then` step in `ValidationStepDefinition` that sets `matchMethod = "matchRegex"` and `matchValue = pattern` in the `ConsumerContext`:
+
+```java
+@Then("expected record value matches regex")
+public void validateRawRegex(DataTable table) {
+    Map<String, String> row = DataTableUtils.firstRow(table);
+    consumerValidationService.validateWithMatchValue(
+        row.get("topicAlias"),
+        "matchRegex",
+        row.get("pattern")
+    );
+}
+```
+
+Gherkin usage:
+
+```gherkin
+Then expected record value matches regex
+  | topicAlias | pattern                  |
+  | orders-out | .*"status":"PROCESSED".* |
+```
+
+---
+
+## Design rules to follow
+
+1. **Never throw from `match()`** — return `MatchResult.fail(...)` on assertion failure. Only throw `ComparisonException` for configuration errors (missing file, bad XPath expression, etc.).
+2. **Always handle empty `records` list** — the consumer may legitimately receive 0 records if the watcher step lets it.
+3. **Use `context.getMatchFilePath()`** (convenience accessor) for single-record matchers; iterate `context.getMatchFilePaths()` for batch matchers.
+4. **`excludedFields` defaults to `emptyList()`** — guard with `!context.getExcludedFields().isEmpty()` not `!= null`.
+

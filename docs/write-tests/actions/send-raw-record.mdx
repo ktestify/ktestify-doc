@@ -1,0 +1,72 @@
+---
+sidebar_position: 1
+title: Send Raw Record
+description: Produce a raw (String/JSON/text/XML) message to a Kafka input topic from a file.
+---
+
+# Send Raw Record — `When record from file is sent`
+
+Produces a raw (String-serialised) message to a Kafka **input** topic. The file content is read as-is, with [dynamic variables](../dynamic-variables) resolved before sending.
+
+---
+
+## Syntax
+
+```gherkin
+When record from file is sent
+  | topicName  | file           | recordKey | headerFile        |
+  | orders-in  | order.json     | order-001 | headers.json      |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicName` | `string` | ✅ | Name or alias of a declared **input** topic |
+| `file` | `string` | ✅ | Path to the payload file, relative to the assets directory |
+| `recordKey` | `string` | ❌ | Kafka record key; omit to send with `null` key |
+| `headerFile` | `string` | ❌ | Path to a JSON file containing Kafka headers (`{"headerName": "headerValue"}`) |
+
+---
+
+## File format
+
+The file can contain any text content — JSON, XML, plain text, CSV. KTestify sends it verbatim as the record value (String serialisation). Dynamic variables (e.g. `{{DATE:yyyy-MM-dd}}`) are resolved before sending.
+
+```json title="assets/order.json"
+{
+  "orderId": "{{RANDOM:UUID}}",
+  "createdAt": "{{DATE:yyyy-MM-dd}}",
+  "product": "Widget A"
+}
+```
+
+---
+
+## Headers file format
+
+```json title="assets/headers.json"
+{
+  "X-Correlation-Id": "abc-123",
+  "X-Source-System": "order-service"
+}
+```
+
+---
+
+## Multiple records in one step
+
+Add multiple rows to the DataTable to produce several records in sequence:
+
+```gherkin
+When record from file is sent
+  | topicName | file          | recordKey |
+  | orders-in | order-001.json | order-001 |
+  | orders-in | order-002.json | order-002 |
+```
+
+---
+
+## See also
+
+- [Send Avro record →](send-avro-record)
+- [Dynamic variables →](../dynamic-variables)
+

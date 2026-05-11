@@ -1,0 +1,76 @@
+---
+sidebar_position: 2
+title: Send Avro Record
+description: Produce an Avro-serialised message to a Kafka input topic from a JSON file.
+---
+
+# Send Avro Record — `When record from file based on schema is sent`
+
+Produces an Avro-serialised message to a Kafka **input** topic. KTestify reads the payload from a JSON file, serialises it using the specified Avro schema, and registers the schema in Schema Registry if needed.
+
+---
+
+## Syntax
+
+```gherkin
+When record from file based on schema is sent
+  | topicName  | file         | schemaName | recordKey |
+  | orders-in  | order.json   | Order      | ord-001   |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicName` | `string` | ✅ | Name or alias of a declared **input** topic |
+| `file` | `string` | ✅ | Path to a JSON payload file, relative to assets directory |
+| `schemaName` | `string` | ❌ | Schema name declared via `Given schema`; if omitted, resolved via TopicNameStrategy |
+| `recordKey` | `string` | ❌ | Kafka record key; omit to send with `null` key |
+
+---
+
+## Payload file format
+
+The payload must be valid JSON that matches the Avro schema fields:
+
+```json title="assets/order.json"
+{
+  "orderId": "ord-001",
+  "product": "Widget A",
+  "quantity": 3,
+  "createdAt": "{{DATE:yyyy-MM-dd}}"
+}
+```
+
+Date fields are normalised automatically by `AvroUtils` before serialisation.
+
+---
+
+## Schema resolution
+
+KTestify resolves the Avro schema in this order:
+
+1. If `schemaName` is set → looks up subject `schemaName-value` in Schema Registry.
+2. If `schemaName` is empty → uses TopicNameStrategy: `namespace.topicName-value`.
+
+Make sure the schema is registered before running the test (the [local Docker stack](../../getting-started/local-stack) pre-registers sample schemas via `init-topics.sh`).
+
+---
+
+## Prerequisites
+
+- Schema Registry URL configured: `ktestify.schema-registry.url`
+- Schema declared in Background:
+
+```gherkin
+Given schema
+  | schemaName | schemaAlias |
+  | Order      | order       |
+```
+
+---
+
+## See also
+
+- [Avro assertions →](../assertions/avro-matchers)
+- [Schemas background step →](../background/schemas)
+- [Configuration →](../configuration)
+

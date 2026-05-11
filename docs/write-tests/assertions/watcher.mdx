@@ -1,0 +1,63 @@
+---
+sidebar_position: 5
+title: Watcher (Presence / Absence)
+description: Assert that a record appears or does not appear on an output topic within the timeout window.
+---
+
+# Watcher — `And record should (not) appear in topic`
+
+The watcher steps don't compare record content — they simply verify that **at least one record** (optionally matching a key) does or does not appear on a topic within the read timeout window.
+
+---
+
+## Record should appear — positive assertion
+
+```gherkin
+And record should appear in topic
+  | topicAlias | topicType | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | raw       | 15                  | 60                |
+```
+
+Fails if **no** record appears within `consumerReadTimeout` seconds.
+
+---
+
+## Record should not appear — negative assertion
+
+```gherkin
+And record should not appear in topic
+  | topicAlias | topicType | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | raw       | 10                  | 30                |
+```
+
+Passes only if **no** record appears within `consumerReadTimeout` seconds. Use this to assert that a message is **filtered out** or **not produced** by your pipeline.
+
+---
+
+## Column reference
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicAlias` | `string` | ✅ | Alias of a declared output topic |
+| `topicType` | `string` | ✅ | `raw` or `avro` — determines deserialiser |
+| `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait (or confirm absence) |
+| `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
+
+:::tip[Choosing the right timeout for negative assertions]
+For `should not appear`, set `consumerReadTimeout` to a value that is long enough to be confident nothing will arrive, but short enough to not slow your suite down unnecessarily. 5–10 seconds is usually a good starting point.
+:::
+
+---
+
+## Example — filtering scenario
+
+```gherkin
+Scenario: Invalid orders are filtered out
+  When record from file is sent
+    | topicName | file              | recordKey   |
+    | orders-in | order-invalid.json | order-invalid |
+  And record should not appear in topic
+    | topicAlias | topicType | consumerReadTimeout |
+    | orders-out | raw       | 10                  |
+```
+

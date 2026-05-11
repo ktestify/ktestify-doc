@@ -1,0 +1,128 @@
+---
+sidebar_position: 1
+title: Built-in Matchers
+description: Reference for all 11 built-in RecordMatcher implementations and when to use each.
+---
+
+# Built-in Matchers
+
+KTestify ships 11 `RecordMatcher<V>` implementations, split into raw (String) and Avro (GenericRecord) variants. They are selected automatically by `RecordMatcherFactory` based on the `matchMethod` in `MatchContext`.
+
+---
+
+## Factory resolution table
+
+| `matchMethod` constant | Raw matcher | Avro matcher |
+|---|---|---|
+| `methodMatchFile` | `FileRecordMatcher` | `AvroFileRecordMatcher` |
+| `methodMatchKeyValue` | `FileKeyRecordMatcher` | `AvroFileKeyRecordMatcher` |
+| `methodFieldsToMatch` | `FieldsRecordMatcher` | `AvroFieldsRecordMatcher` |
+| `methodMatchXML` | `XmlRecordMatcher` | ❌ `ConsumerException` |
+| `methodMatchXPath` | `XPathRecordMatcher` | ❌ `ConsumerException` |
+| `methodRecordKeyMatch` | `KeyRecordMatcher` | `AvroKeyRecordMatcher` |
+| `null` / blank | `NoOpRecordMatcher<V>` | `NoOpRecordMatcher<V>` |
+
+```java
+// Usage
+RecordMatcher<String> raw  = RecordMatcherFactory.forRaw("matchFile");
+RecordMatcher<GenericRecord> avro = RecordMatcherFactory.forAvro("matchFile");
+```
+
+---
+
+## Raw matchers (V = String)
+
+### `FileRecordMatcher`
+
+Compares the record value character-for-character against a file's content after dynamic variable resolution. Uses `StringDiffUtils` to produce a coloured ANSI diff on failure.
+
+- **MatchContext fields used:** `matchFilePaths.get(0)`
+- **On failure:** returns `MatchResult.fail(diff, expected, actual)`
+
+---
+
+### `FileKeyRecordMatcher`
+
+Asserts both the record **key** and **value**. The expected file must contain the key on line 1 and the value from line 2 onwards.
+
+- **MatchContext fields used:** `matchFilePaths.get(0)`
+
+---
+
+### `KeyRecordMatcher`
+
+Asserts only the record **key** — the value is not evaluated.
+
+- **MatchContext fields used:** `matchKey` (falls back to `matchFilePaths.get(0)` if blank)
+
+---
+
+### `FieldsRecordMatcher`
+
+Extracts a character range `[from, to)` from line `line` of the record value and compares it against the same range from the expected file. Implemented via `FieldMatcherUtils`.
+
+- **MatchContext fields used:** `matchFilePaths.get(0)`, `matchKey` (encodes `line:from:to`)
+
+---
+
+### `XmlRecordMatcher`
+
+Parses both the record value and the expected file as XML, optionally removes excluded elements from both, then compares structurally using `XMLUtils`. Element order does not matter.
+
+- **MatchContext fields used:** `matchFilePaths.get(0)`, `excludedFields` (element name list)
+- **Not available for Avro.**
+
+---
+
+### `XPathRecordMatcher`
+
+Runs one or more XPath expressions against the record value and compares each extracted value against the corresponding line of the expected file.
+
+- **MatchContext fields used:** `matchFilePaths.get(0)`, `matchKey` (comma-separated XPath expressions)
+- **Not available for Avro.**
+
+---
+
+### `NoOpRecordMatcher<V>`
+
+Always returns `MatchResult.pass()`. Used when `matchMethod` is `null` or blank — typically for watcher steps that only care about record presence, not content.
+
+---
+
+## Avro matchers (V = GenericRecord)
+
+All Avro matchers first deserialise the `GenericRecord` to a JSON `Map` via `AvroUtils.toJsonMap()`, then delegate to comparison logic equivalent to their raw counterparts.
+
+### `AvroFileRecordMatcher`
+
+Avro equivalent of `FileRecordMatcher`. Converts `GenericRecord` → JSON string, excludes top-level keys in `excludedFields`, then compares against the expected file.
+
+- **MatchContext fields used:** `matchFilePaths.get(0)`, `excludedFields`
+
+---
+
+### `AvroFileKeyRecordMatcher`
+
+Avro equivalent of `FileKeyRecordMatcher`. Asserts key + Avro-serialised JSON value.
+
+---
+
+### `AvroKeyRecordMatcher`
+
+Avro equivalent of `KeyRecordMatcher`. Key-only assertion; Avro value ignored.
+
+---
+
+### `AvroFieldsRecordMatcher`
+
+Avro equivalent of `FieldsRecordMatcher`. Extracts a character range from the JSON-serialised Avro value.
+
+---
+
+## Key design rules
+
+1. `excludedFields` defaults to `Collections.emptyList()` — matchers check `isEmpty()`, never `null`.
+2. `matchFilePaths` is always a `List<String>` — single-record matchers use `get(0)`, batch matchers iterate by index.
+3. XML/XPath matchers throw `ConsumerException` when called via `RecordMatcherFactory.forAvro()`.
+4. `NoOpRecordMatcher` is the default when no match method is configured.
+

@@ -1,0 +1,64 @@
+---
+sidebar_position: 1
+title: Namespaces
+description: Declare a topic namespace (prefix) that is transparently prepended to all topic names.
+---
+
+# Namespaces — `Given namespace` / `Given namespaces`
+
+A **namespace** is a prefix that KTestify prepends to every topic name to form the physical Kafka topic name: `namespace.topicName`. This lets you share a single Kafka cluster across environments by varying the prefix.
+
+---
+
+## Given namespace (single)
+
+Declares one namespace used by all topics in the scenario.
+
+```gherkin
+Given namespace
+  | namespace |
+  | myapp     |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `namespace` | `string` | ✅ | The namespace prefix (e.g. `myapp`, `com.example`) |
+
+---
+
+## Given namespaces (multiple)
+
+Declares multiple named namespaces when a scenario involves topics from more than one logical domain.
+
+```gherkin
+Given namespaces
+  | namespace   | namespaceAlias |
+  | myapp.input | input-ns       |
+  | myapp.audit | audit-ns       |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `namespace` | `string` | ✅ | The namespace prefix |
+| `namespaceAlias` | `string` | ✅ | Alias used when assigning this namespace to a topic |
+
+Namespaces are then referenced in topic declarations:
+
+```gherkin
+Given output topic
+  | topicName   | topicAlias | namespace   | namespaceAlias |
+  | orders-out  | orders     | myapp.audit | audit-ns       |
+```
+
+---
+
+## How namespacing works
+
+Given `namespace = myapp` and `topicName = orders-out`, the physical Kafka topic used is:
+
+```
+myapp.orders-out
+```
+
+If no namespace is declared, the default from `ktestify.kafka.topic-namespace` in `application.conf` is used. If that is also empty, the topic name is used as-is.
+

@@ -1,0 +1,90 @@
+---
+sidebar_position: 1
+title: Timeout Tuning
+description: Understand and tune the two timeout layers in KTestify for reliable CI tests.
+---
+
+# Timeout Tuning
+
+KTestify has a custom Kafka Consumer that has a time-to-live (TTL) to prevent tests from hanging indefinitely when records are not produced as expected. This TTL is implemented as a two-layer timeout system:
+
+
+---
+
+## Layer 1 — Inner timeout (`KafkaRecordFetcher`)
+
+The inner timeout controls how long the fetcher blocks waiting for records from Kafka. It maps to the Kafka `poll` loop.
+
+**Source of truth (highest to lowest priority):**
+
+1. `consumerReadTimeout` column in the DataTable (seconds) — per-step override
+2. `ktestify.consumer.read-timeout-ms` in properties map — per-consumer override
+3. `ktestify.framework.timeouts.default-read-timeout` in HOCON config
+
+```hocon
+ktestify.framework.timeouts.default-read-timeout = 30s
+```
+
+---
+
+## Layer 2 — Outer safety net (`ExecutorService`)
+
+The orchestration layer submits the consumer to an `ExecutorService` and calls `.get(readTimeout + BUFFER_TIME)`. This catches JVM-level hangs that slip past the inner Kafka timeout.
+
+```
+BUFFER_TIME = 5 000 ms   (ConfigConstants.BUFFER_TIME)
+```
+
+So if `readTimeout = 30s`, the outer guard fires at `35s`. This is intentional — **do not remove it**.
+
+---
+
+## Consumer delta time
+
+`consumerDeltaTime` controls how far back in time KTestify seeks before starting to poll. This ensures records produced just before the test step are not missed.
+
+| Setting | Unit | Default |
+|---|---|---|
+| DataTable column `consumerDeltaTime` | seconds | 60 |
+| `ktestify.framework.timeouts.consumer-delta-time` | duration | `60s` |
+
+:::warning[Unit mismatch]
+`ConsumerContext.consumerDeltaTime` stores the value internally as **milliseconds**. The DataTable column is always in **seconds** — KTestify converts automatically. Never pass milliseconds to the DataTable.
+:::
+
+---
+
+## When to increase timeouts
+
+| Situation | Recommendation |
+|---|---|
+| Pipeline has high processing latency | Increase `consumerReadTimeout` |
+| Tests run against a slow CI Kafka | Increase `default-read-timeout` globally in `application.conf` |
+| Tests miss records that were just produced | Increase `consumerDeltaTime` |
+| All tests pass locally, fail in CI | Add `consumerDeltaTime` column to every assertion step |
+
+---
+
+## Example — per-step timeout override
+
+```gherkin
+Then expected record from file
+  | topicAlias | file          | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | expected.json | 90                  | 120               |
+```
+
+---
+
+## Example — global config for slow environment
+
+```hocon
+ktestify {
+  framework {
+    timeouts {
+      default-read-timeout = 120s
+      consumer-delta-time  = 180s
+    }
+  }
+}
+```
+

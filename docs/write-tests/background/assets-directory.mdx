@@ -1,0 +1,96 @@
+---
+sidebar_position: 3
+title: Assets Directory
+description: Declare the base directory from which KTestify resolves all payload and expected files.
+---
+
+# Assets Directory — `Given assets directory`
+
+The **assets directory** is the base path from which all file references in DataTable columns are resolved. Declare it once in the Background and all `When` / `Then` file paths become relative to it.
+
+---
+
+## Syntax
+
+```gherkin
+Given assets directory
+  | absolutePath                                      |
+  | /workspace/features/order-from-partner/assets     |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `absolutePath` | `string` | ✅ | Path to the assets directory **as seen from inside the container** |
+
+---
+
+## Where your assets live
+
+Following the [recommended project layout](../../getting-started/installation#project-layout), your assets sit right next to their feature file inside your Git repository:
+
+```
+my-ktestify-tests/                  ← Git repository root
+└── workspace/
+    └── features/
+        └── order-from-partner/
+            ├── order-from-partner.feature
+            └── assets/
+                ├── order.json                 ← payload for When steps
+                ├── order-unknown-partner.json
+                └── order-enriched.json        ← expected file for Then steps
+```
+
+When you run the container, `workspace/features` is mounted to `/workspace/features`:
+
+```bash
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  ...
+```
+
+So inside the container, your assets folder is at `/workspace/features/order-from-partner/assets` — that is exactly the path you declare in your Background:
+
+```gherkin
+Background:
+  Given assets directory
+    | absolutePath                                      |
+    | /workspace/features/order-from-partner/assets     |
+```
+
+:::tip[One assets folder per feature]
+Keeping assets next to their feature file makes each test self-contained. You always know exactly which files belong to which scenario — no shared global assets folder to maintain.
+:::
+
+---
+
+## Alternative: set globally via environment variable
+
+If all your feature files share a common assets root, you can skip the `Given assets directory` step entirely and set it once:
+
+```bash
+-e KTESTIFY_ASSETS_DIR=/workspace/features
+```
+
+Or in your `application.conf`:
+
+```hocon
+ktestify.framework.directories.assets = "/workspace/features"
+```
+
+File references in DataTable columns are then relative to that root.
+
+---
+
+## How file paths are resolved in steps
+
+Once the assets directory is set, every file column in a `When` or `Then` step is resolved relative to it:
+
+```gherkin
+When record from file is sent
+  | topicName      | file        |
+  | partner-orders | order.json  |   ← resolves to /workspace/features/order-from-partner/assets/order.json
+
+Then expected record from file based on schema
+  | topicAlias   | file                |
+  | enriched-out | order-enriched.json |   ← same base directory
+```

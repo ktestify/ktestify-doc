@@ -1,0 +1,65 @@
+---
+sidebar_position: 4
+title: Schemas
+description: Declare Avro schemas for use in Avro producer .
+---
+
+# Schemas — `Given schema`
+
+:::info[Schemas are only required for producers]
+Schemas are only required if you use Avro producers, for consumers values are already deserialized by Kafka, so KTestify does not need to know the schema.
+:::
+
+Declare an Avro schema by name so it can be referenced in Avro producer . KTestify resolves the schema from the Schema Registry using the name you provide.
+
+---
+
+## Syntax
+
+```gherkin
+Given schema
+  | schemaName    | schemaAlias  | schemaVersion |
+  | Order         | order-schema | 1             |
+  | OrderProcessed| processed    |               |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `schemaName` | `string` | ✅ | Name registered in Schema Registry (subject: `schemaName-value`) |
+| `schemaAlias` | `string` | ✅ | Short alias used in producer/consumer steps |
+| `schemaVersion` | `integer` | ❌ | Schema version to use; defaults to latest if omitted |
+
+---
+
+## Schema Registry subject resolution
+
+When you set `schemaName = Order` in a producer step, KTestify looks up the schema using the subject `Order-value` in Schema Registry. If no `schemaName` is set, it falls back to the TopicNameStrategy subject (`namespace.topicName-value`).
+
+---
+
+## Example — Avro producer step
+
+```gherkin
+When record from file based on schema is sent
+  | topicName  | file         | schemaName | recordKey |
+  | orders-in  | order.json   | Order      | ord-001   |
+```
+
+The `schemaName` here must match an alias or name declared via `Given schema`.
+
+---
+
+## Schema Registry configuration
+
+Make sure your Schema Registry URL is set:
+
+```hocon
+ktestify {
+  schema-registry {
+    url = "http://localhost:8081"
+  }
+}
+```
+
+See [Configuration →](../configuration) for full Schema Registry security options (basic auth, SSL).
+

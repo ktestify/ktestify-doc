@@ -1,0 +1,70 @@
+---
+sidebar_position: 4
+title: Batch Assertions
+description: Assert multiple Kafka records in a single step — raw and Avro batch matchers.
+---
+
+# Batch Assertions
+
+Batch steps consume multiple records from an output topic in a single step and match each one against a corresponding expected file. Records and files are matched **positionally** (record[0] → file[0], etc.).
+
+---
+
+## Raw batch — `Then expected records from files`
+
+```gherkin
+Then expected records from files
+  | topicAlias | expectedRecordsCount | files                         | consumerReadTimeout |
+  | orders-out | 3                    | exp-1.json,exp-2.json,exp-3.json | 60               |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicAlias` | `string` | ✅ | Alias of a declared output topic |
+| `expectedRecordsCount` | `integer` | ✅ | Exact number of records to collect before asserting |
+| `files` | `string` | ✅ | Comma-separated list of expected file paths (relative to assets dir), one per record |
+| `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait for **all** records |
+| `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
+
+---
+
+## Avro batch — `Then expected records from files based on schema`
+
+```gherkin
+Then expected records from files based on schema
+  | topicAlias | expectedRecordsCount | files                    | excludedKeys |
+  | orders-out | 2                    | exp-1.json,exp-2.json    | ts,eventId   |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicAlias` | `string` | ✅ | Alias of a declared output topic |
+| `expectedRecordsCount` | `integer` | ✅ | Exact number of records to collect |
+| `files` | `string` | ✅ | Comma-separated list of expected JSON file paths |
+| `excludedKeys` | `string` | ❌ | Comma-separated Avro field names to exclude from all records |
+| `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait for all records |
+| `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
+
+---
+
+## Timeout behaviour
+
+- If the consumer collects **fewer than `expectedRecordsCount`** records before the timeout, the step fails with:
+  > `Timed out after Nms waiting for 4 record(s) — only 2 collected.`
+- Increase `consumerReadTimeout` if your pipeline produces output slowly.
+
+---
+
+## Ordering caveat
+
+Records are matched positionally in the order they are fetched from Kafka partitions. If your pipeline does not guarantee ordering (e.g. multiple partitions), use individual assertion steps per record with `expectedRecordKey` filtering instead.
+
+---
+
+## See also
+
+- [Raw matchers →](raw-matchers)
+- [Avro matchers →](avro-matchers)
+- [Batch testing guide →](../advanced/batch-testing)
+- [Timeout tuning →](../advanced/timeout-tuning)
+

@@ -1,0 +1,93 @@
+---
+sidebar_position: 3
+title: Avro Matchers
+description: Assert Avro-serialised Kafka records against JSON files or specific field values.
+---
+
+# Avro Assertions
+
+Avro matchers deserialise `GenericRecord` values (via Schema Registry) and compare them as JSON or by individual fields.
+
+---
+
+## File match — `Then expected record from file based on schema`
+
+Fetches an Avro record, converts it to JSON, and compares it against an expected JSON file. Excludes specified top-level keys from comparison.
+
+```gherkin
+Then expected record from file based on schema
+  | topicAlias | file           | excludedKeys      | consumerReadTimeout |
+  | orders-out | expected.json  | createdAt,eventId | 30                  |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicAlias` | `string` | ✅ | Alias of a declared output topic |
+| `file` | `string` | ✅ | Expected JSON file path, relative to assets directory |
+| `excludedKeys` | `string` | ❌ | Comma-separated list of Avro field names to ignore during comparison |
+| `expectedRecordKey` | `string` | ❌ | Filter: only accept records with this exact key |
+| `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait for a record |
+| `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
+
+---
+
+## Key + file match — `Then expected record with key and value from file based on schema`
+
+Asserts both the record **key** and **value** (as Avro → JSON) against a file.
+
+```gherkin
+Then expected record with key and value from file based on schema
+  | topicAlias | file          | excludedKeys |
+  | orders-out | expected.json | timestamp    |
+```
+
+---
+
+## Field value match — `Then expected record based on schema should have fields matching from given value`
+
+Asserts one or more specific Avro field values without a file.
+
+```gherkin
+Then expected record based on schema should have fields matching from given value
+  | topicAlias | key       | value     |
+  | orders-out | status    | PROCESSED |
+```
+
+| Column | Type | Required | Description |
+|---|---|---|---|
+| `topicAlias` | `string` | ✅ | Alias of a declared output topic |
+| `key` | `string` | ✅ | Avro field name |
+| `value` | `string` | ✅ | Expected field value (string-compared after JSON serialisation) |
+
+---
+
+## Key match — `Then expected Avro record should match key`
+
+Asserts only the **record key**; the Avro value is ignored.
+
+```gherkin
+Then expected record based on schema should match key
+  | topicAlias | expectedRecordKey |
+  | orders-out | ord-001           |
+```
+
+---
+
+## Positional fields — `Then expected record based on schema should have fields matching from file`
+
+Assert a specific character range of the JSON-serialised Avro value.
+
+```gherkin
+Then expected record based on schema should have fields matching from file
+  | topicAlias | file         | line | from | to |
+  | orders-out | expected.txt | 1    | 0    | 10 |
+```
+
+---
+
+## See also
+
+- [Batch Avro assertions →](batch-assertions)
+- [Schemas background step →](../background/schemas)
+- [Configuration →](../configuration)
+
