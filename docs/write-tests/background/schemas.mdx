@@ -4,7 +4,7 @@ title: Schemas
 description: Declare Avro schemas for use in Avro producer .
 ---
 
-# Schemas — `Given schema`
+# Schemas : `Given schema`
 
 :::info[Schemas are only required for producers]
 Schemas are only required if you use Avro producers, for consumers values are already deserialized by Kafka, so KTestify does not need to know the schema.
@@ -37,7 +37,7 @@ When you set `schemaName = Order` in a producer step, KTestify looks up the sche
 
 ---
 
-## Example — Avro producer step
+## Example : Avro producer step
 
 ```gherkin
 When record from file based on schema is sent

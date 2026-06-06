@@ -4,13 +4,13 @@ title: Watcher (Presence / Absence)
 description: Assert that a record appears or does not appear on an output topic within the timeout window.
 ---
 
-# Watcher — `And record should (not) appear in topic`
+# Watcher : `And record should (not) appear in topic`
 
-The watcher steps don't compare record content — they simply verify that **at least one record** (optionally matching a key) does or does not appear on a topic within the read timeout window.
+The watcher steps don't compare record content, they simply verify that **at least one record** (optionally matching a key) does or does not appear on a topic within the read timeout window.
 
 ---
 
-## Record should appear — positive assertion
+## Record should appear, positive assertion
 
 ```gherkin
 And record should appear in topic
@@ -22,7 +22,7 @@ Fails if **no** record appears within `consumerReadTimeout` seconds.
 
 ---
 
-## Record should not appear — negative assertion
+## Record should not appear, negative assertion
 
 ```gherkin
 And record should not appear in topic
@@ -49,7 +49,7 @@ For `should not appear`, set `consumerReadTimeout` to a value that is long enoug
 
 ---
 
-## Example — filtering scenario
+## Example : filtering scenario
 
 ```gherkin
 Scenario: Invalid orders are filtered out

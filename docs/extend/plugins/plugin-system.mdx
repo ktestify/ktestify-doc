@@ -1,131 +1,299 @@
 ---
 sidebar_position: 1
 title: Plugin System
-description: How the KTestify plugin system works — KtestifyPlugin, PluginRegistry, and PluginContext.
+description: How the KTestify plugin system works, KtestifyPlugin, PluginRegistry, and PluginContext.
 ---
 
 # Plugin System
 
-KTestify includes a lightweight plugin system in `ktestify-core` that allows optional extensions to be registered and discovered at runtime without hard-coding dependencies.
+KTestify includes a powerful plugin system that allows you to extend the framework with new transports and capabilities, all discovered and loaded automatically at runtime without hard-coding dependencies. Plugins follow a Service Provider Interface (SPI) pattern using Java's `ServiceLoader` for seamless integration.
+
+:::tip
+Want to build your own plugin? Jump straight to [Creating a Plugin](create-plugin).
+:::
 
 ---
 
-## Core types
+## How It Works
 
-### `KtestifyPlugin`
+KTestify's plugin system has two key loading phases:
 
-The plugin interface. Every plugin must implement it:
+### Phase 1: Classpath Plugins
+
+Plugins bundled as Maven dependencies are discovered via `ServiceLoader` on startup. This works because the project's build system (Maven Shade) automatically merges all `META-INF/services` descriptors from bundled JARs into the final artifact.
+
+### Phase 2: External Directory Plugins
+
+Third-party plugins can be placed as `.jar` files in a directory configured by `ktestify.plugins.dir` (default: `/workspace/plugins`). Each JAR is loaded independently via a dedicated `URLClassLoader` and its plugins are discovered automatically, without conflicts with classpath plugins.
+
+This two-phase approach lets you:
+- Ship plugins with your test framework as dependencies
+- Drop third-party plugins at runtime without recompilation
+- Keep plugin JAR versions independent
+
+---
+
+## Lifecycle
+
+Every plugin goes through a predictable lifecycle:
+
+1. **Discovery**, The plugin system scans for implementations of `KtestifyPlugin` (first classpath, then external JARs)
+2. **Initialization**, `initialize(PluginContext)` is called exactly once before any Cucumber scenario runs
+3. **Scenario Execution**, Steps from the plugin's glue package are available for use in Gherkin
+4. **Shutdown**, `shutdown()` is called once on JVM shutdown to release resources
+
+If any plugin's `initialize()` method throws an exception, the entire test run is aborted with a `PluginException`.
+
+---
+
+## Core Types
+
+### `KtestifyPlugin` interface
+
+The contract that every plugin must implement:
 
 ```java
 package io.github.ktestify.plugin;
 
 public interface KtestifyPlugin {
-    /** Unique plugin identifier (e.g. "azureblob", "s3", "sftp") */
-    String getPluginId();
 
-    /** Called once when the plugin is registered */
+    /**
+     * Unique, stable plugin identifier (e.g. "azure-blob", "ibm-mq").
+     * Use kebab-case, as this ID appears in HOCON config paths and logs.
+     */
+    String getId();
+
+    /**
+     * Plugin version string (e.g. "1.0.0").
+     * Used for informational logging and diagnostics only.
+     */
+    String getVersion();
+
+    /**
+     * Display name of the plugin author or team.
+     * Shown in the startup banner next to the plugin ID and version.
+     * Default: "unknown"
+     */
+    default String getAuthorName() { return "unknown"; }
+
+    /**
+     * Contact email of the plugin author or team.
+     * Displayed alongside the author name in startup logs.
+     * Default: empty string
+     */
+    default String getAuthorEmail() { return ""; }
+
+    /**
+     * Fully-qualified Java package containing this plugin's Cucumber steps.
+     * Example: "io.github.ktestify.azureblob.steps"
+     *
+     * The ktestify runtime injects this as a --glue argument to Cucumber,
+     * so step definitions are discovered automatically.
+     * Return null or empty string if the plugin has no steps.
+     */
+    String getGluePackage();
+
+    /**
+     * Initialize the plugin exactly once at startup.
+     * Called after config is loaded but before any Cucumber scenario runs.
+     *
+     * Use this to:
+     * - Validate plugin-specific configuration
+     * - Create shared clients or connections
+     * - Initialize thread pools or singleton services
+     *
+     * Throw PluginException to abort the test run.
+     */
     void initialize(PluginContext context);
+
+    /**
+     * Shut down the plugin exactly once on JVM exit.
+     * Called after all Cucumber scenarios have finished.
+     *
+     * Use this to release resources (connections, threads, etc.).
+     * Do NOT throw exceptions, log and swallow instead.
+     */
+    void shutdown();
 }
 ```
 
----
+### `PluginContext` interface
 
-### `PluginContext`
-
-Passed to `initialize()`. Gives the plugin access to the framework configuration:
+Passed to `initialize()`, provides controlled access to framework configuration:
 
 ```java
 package io.github.ktestify.plugin;
 
-public class PluginContext {
-    private final KtestifyConfig config;
-
-    public KtestifyConfig getConfig() { return config; }
+public interface PluginContext {
+    /**
+     * Returns the fully loaded KtestifyConfig singleton.
+     *
+     * Call getRaw() on the result to navigate to your plugin's
+     * ktestify.plugins.<id> subtree, or access shared settings
+     * like ktestify.framework.directories.assets.
+     */
+    KtestifyConfig getConfig();
 }
 ```
 
----
-
-### `PluginRegistry`
-
-Singleton registry. Plugins register themselves (typically via `@Before` hook or static initialiser) and can be retrieved by ID:
+**Example - reading plugin config:**
 
 ```java
-package io.github.ktestify.plugin;
+@Override
+public void initialize(PluginContext context) {
+    Config fullConfig = context.getConfig().getRaw();
 
-public class PluginRegistry {
-    public static void register(KtestifyPlugin plugin) { ... }
-    public static KtestifyPlugin get(String pluginId) { ... }
-    public static boolean isRegistered(String pluginId) { ... }
-}
-```
-
----
-
-## Writing a plugin
-
-### 1. Implement `KtestifyPlugin`
-
-```java
-public class S3Plugin implements KtestifyPlugin {
-
-    @Override
-    public String getPluginId() { return "s3"; }
-
-    @Override
-    public void initialize(PluginContext context) {
-        String bucket = context.getConfig()
-            .getConfig().getString("ktestify.s3.bucket");
-        // set up S3 client, etc.
+    // Access your plugin's subtree
+    if (fullConfig.hasPath("ktestify.plugins.my-plugin")) {
+        Config pluginCfg = fullConfig.getConfig("ktestify.plugins.my-plugin");
+        String endpoint = pluginCfg.getString("endpoint");
+        Duration timeout = pluginCfg.getDuration("timeout");
     }
 }
 ```
 
-### 2. Register at startup
+### `PluginRegistry` class
 
-In a Cucumber `@Before` hook (or a static initialiser):
-
-```java
-@Before(order = 0)
-public void registerPlugins() {
-    PluginRegistry.register(new S3Plugin());
-}
-```
-
-### 3. Add Gherkin steps
-
-Create step definition classes that retrieve the plugin from `PluginRegistry` and delegate to your plugin's services:
+The central registry that discovers, loads, and manages all plugins:
 
 ```java
-@Given("S3 bucket")
-public void givenS3Bucket(DataTable table) {
-    S3Plugin plugin = (S3Plugin) PluginRegistry.get("s3");
-    // use plugin to register bucket in shared resources
+package io.github.ktestify.plugin;
+
+public final class PluginRegistry {
+    /**
+     * Discovers and initializes all plugins (classpath + external).
+     * Call this once at startup before Cucumber runs.
+     */
+    public static PluginRegistry load(PluginContext ctx);
+
+    /**
+     * Get all loaded plugins.
+     */
+    public List<KtestifyPlugin> getPlugins();
+
+    /**
+     * Get the Cucumber glue packages from all plugins.
+     * Add each as --glue <package> when running Cucumber.
+     */
+    public List<String> getGluePackages();
+
+    /**
+     * Shut down all plugins in reverse initialization order.
+     */
+    public void shutdown();
 }
 ```
 
 ---
 
-## Plugin configuration
+## Plugin Configuration
 
-By convention, plugins read their configuration from under the `ktestify` namespace in HOCON:
+Plugins read their configuration from the HOCON file under `ktestify.plugins.<id>`. This convention keeps plugin settings isolated and organized:
 
 ```hocon
 ktestify {
-  s3 {
-    bucket = "my-test-bucket"
-    region = "eu-west-1"
+  plugins {
+    # Azure Blob Storage plugin
+    azure-blob {
+      connection-string = ${?AZURE_STORAGE_CONNECTION_STRING}
+      timeout = 30s
+      auto-create-containers = true
+    }
+
+    # IBM MQ plugin (hypothetical)
+    ibm-mq {
+      host = "localhost"
+      port = 1414
+      channel = "DEV.ADMIN.SVRCONN"
+      queue-manager = "QM1"
+    }
   }
 }
 ```
+
+**Configuration resolution order:**
+
+1. System properties (e.g. `-Dktestify.plugins.my-plugin.timeout=60s`)
+2. Environment variables (recommended for secrets, e.g. `KTESTIFY_PLUGINS_MY_PLUGIN_ENDPOINT`)
+3. `application.conf` in classpath
+4. Plugin's `reference.conf` (defaults)
 
 ---
 
 ## Available plugins
 
-| Plugin | Artifact | Status |
-|---|---|---|
-| Azure Blob Storage | `ktestify-plugin-azureblob` | 🚧 In progress — see [Azure Blob →](azureblob) |
-| S3 | — | 💡 Planned |
-| SFTP | — | 💡 Planned |
+| Plugin | Artifact | Status | Docs |
+|---|---|---|---|
+| Azure Blob Storage | `ktestify-plugin-azureblob` | 🚧 In progress | [Azure Blob →](azureblob) |
+| S3 |, | 💡 Planned |, |
+| IBM MQ |, | 💡 Planned |, |
+| SFTP |, | 💡 Planned |, |
+
+---
+
+## Example Plugin Architecture
+
+Here is how a typical plugin is structured:
+
+```
+ktestify-plugin-example/
+├── src/main/java/io/github/ktestify/example/
+│   ├── ExamplePlugin.java              ← implements KtestifyPlugin
+│   ├── config/
+│   │   └── ExampleConfig.java          ← reads plugin HOCON config
+│   ├── transport/
+│   │   ├── ExampleRecordFetcher.java   ← implements RecordFetcher<String>
+│   │   └── ExampleClient.java          ← wraps external SDK
+│   ├── orchestration/
+│   │   └── ExampleConsumer.java        ← orchestrates fetch → match
+│   └── steps/
+│       ├── BackgroundSteps.java        ← @Given steps
+│       ├── ActionSteps.java            ← @When steps
+│       └── ValidationSteps.java        ← @Then steps
+├── src/main/resources/
+│   ├── META-INF/services/
+│   │   └── io.github.ktestify.plugin.KtestifyPlugin
+│   ├── reference.conf                  ← default config
+│   └── log4j2.properties
+├── src/test/java/io/github/ktestify/example/
+│   └── ...test files...
+├── pom.xml
+└── README.md
+```
+
+Most plugins follow the **three-layer separation** defined by ktestify-core:
+
+- **Transport**, `ExampleRecordFetcher` implements `RecordFetcher<String>`, fetches records from the external system
+- **Orchestration**, `ExampleConsumer` wires fetch → match → result
+- **Assertion**, uses standard `RecordMatcher` implementations from ktestify-core
+
+---
+
+## Startup Log Example
+
+When ktestify starts with plugins, you'll see a banner like this:
+
+```
+╔══ KTestify Plugin System ═════════════════════════════════════
+║  [classpath] Discovered plugin: azure-blob v1.0, author: John Doe <john@example.com>
+║  Plugin 'azure-blob' initialized successfully.
+║  [external] Scanning '/workspace/plugins', 2 JAR(s) found.
+║  [external] Discovered plugin: s3 v2.1, author: Jane Smith <jane@example.com>
+║  Plugin 's3' initialized successfully.
+║  3 plugin(s) active: [azure-blob@1.0, s3@2.1, ibm-mq@1.5]
+╚═══════════════════════════════════════════════════════════════
+```
+
+---
+
+## Best Practices
+
+1. **Use kebab-case plugin IDs**, e.g. `azure-blob`, not `azureBlob` or `AZURE_BLOB`
+2. **Namespace your config**, always use `ktestify.plugins.<id>` to avoid conflicts
+3. **Validate in `initialize()`**, fail fast with `PluginException` if critical config is missing
+4. **Release resources in `shutdown()`**, close connections, stop threads, etc.
+5. **Log appropriately**, use `@Slf4j` / SLF4J for diagnostics
+6. **Document config keys**, provide a `reference.conf` with all config keys and defaults
+7. **Register via SPI**, declare your plugin class in `META-INF/services/io.github.ktestify.plugin.KtestifyPlugin`
+8. **Keep dependencies minimal**, avoid bloating the classpath with transitive deps
 

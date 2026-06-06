@@ -1,0 +1,249 @@
+---
+sidebar_position: 0
+title: Plugin Overview
+description: Extend KTestify with plugins, mechanisms, plugin marketplace, and building your own transports.
+---
+
+# Plugin Overview
+
+KTestify's plugin system makes it easy to extend the framework with new transports, storage backends, and integrations, all without modifying core code. Plugins are discovered automatically at startup and contribute Cucumber steps that users can call in their Gherkin scenarios.
+
+---
+
+## What Plugins Can Do
+
+1. **Add new transports**, IBM MQ, Amazon SQS, MQTT, NATS, etc. alongside Kafka
+2. **Integrate external services**, Azure Blob Storage, AWS S3, SFTP servers, databases
+3. **Add custom assertions**, domain-specific validation logic
+4. **Contribute reusable steps**, ready-to-use Cucumber step definitions
+
+All without modifying any core ktestify code.
+
+---
+
+## How Plugins Work (30-second overview)
+
+1. **Implement `KtestifyPlugin`** interface, define your plugin ID, version, and glue package
+2. **Place configuration** under `ktestify.plugins.<id>` in HOCON
+3. **Write Cucumber steps** in the glue package you declared
+4. **Register via SPI**, add a single line to `META-INF/services/io.github.ktestify.plugin.KtestifyPlugin`
+5. **Plugins auto-discover** at startup via `ServiceLoader` or from `/workspace/plugins` directory
+
+Done! Your plugin is now available in any ktestify test run.
+
+---
+
+## In This Section
+
+### [Plugin System Documentation](plugin-system)
+
+Deep dive into,
+
+- How the two-phase plugin loading works (classpath, then external directory)
+- Lifecycle of plugins (discovery, initialization, execution, shutdown)
+- Core interfaces (`KtestifyPlugin`, `PluginContext`, `PluginRegistry`)
+- Configuration via HOCON
+- Startup diagnostics and troubleshooting
+
+**Read this if**: You want to understand *how* ktestify's plugin system works or need to debug plugin loading.
+
+### [Creating a Plugin](create-plugin)
+
+Complete step-by-step guide covering,
+
+- Project setup from the skeleton template
+- POM configuration with essential dependencies
+- Implementing `KtestifyPlugin` with proper initialization and shutdown
+- Building the transport layer (`RecordFetcher` implementation)
+- Writing Cucumber step definitions
+- Configuration and SPI registration
+- Complete working example (Example Plugin)
+- Production checklist
+
+**Read this if**: You want to build your own plugin or learn by example.
+
+### [Azure Blob Storage Plugin](azureblob)
+
+Reference documentation for the `ktestify-plugin-azureblob` first-party plugin,
+
+- Installation as Maven dependency or Docker JAR
+- Complete configuration reference
+- All Gherkin step definitions with examples
+- Local development with Azurite emulator
+- Three-layer architecture overview
+- Troubleshooting common issues
+
+**Read this if**: You want to use the Azure Blob plugin or see a real-world example.
+
+---
+
+## Quick Start
+
+### Use an Existing Plugin
+
+1. Add the plugin JAR as a Maven dependency
+2. Add configuration to your `application.conf` under `ktestify.plugins.<id>`
+3. Use the plugin's steps in your Gherkin scenarios
+4. Run your tests, plugin auto-discovers at startup
+
+Example with Azure Blob Plugin,
+
+```xml
+<!-- pom.xml -->
+<dependency>
+    <groupId>io.github.ktestify</groupId>
+    <artifactId>ktestify-plugin-azureblob</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <scope>test</scope>
+</dependency>
+```
+
+```hocon
+# application.conf
+ktestify.plugins.azure-blob {
+  connection-string = ${?AZURE_STORAGE_CONNECTION_STRING}
+}
+```
+
+```gherkin
+# orders.feature
+Given Azure Blob container
+  | containerName | containerAlias |
+  | test-output   | blobs          |
+
+Then expected blob from file
+  | containerAlias | blobName | file        |
+  | blobs          | data.json| expected.json|
+```
+
+### Build Your Own Plugin
+
+Start with the skeleton template,
+
+```bash
+git clone https://github.com/ktestify/ktestify-plugin-skeleton.git \
+  my-plugin-project
+
+cd my-plugin-project
+# Edit MyPlugin.java and steps
+# mvn package
+```
+
+Then follow the [Creating a Plugin](create-plugin) guide for each step.
+
+---
+
+## Available Plugins
+
+| Plugin | Status | Purpose |
+|---|---|---|
+| **Azure Blob Storage** | 🚧 In progress | Upload/download/validate files in Azure Blob Storage |
+| **S3** | 💡 Planned | Amazon S3 integration |
+| **IBM MQ** | 💡 Planned | IBM Message Queue transport |
+| **SFTP** | 💡 Planned | SFTP file transfer validation |
+
+:::tip
+Don't see a plugin you need? [Build your own!](create-plugin)
+:::
+
+---
+
+## Plugin Architecture
+
+Every plugin follows the same three-layer separation as ktestify-core,
+
+```
+┌────────────────────────────────────────────────────────────┐
+│  TRANSPORT LAYER              │  ORCHESTRATION  │ ASSERTION │
+│  RecordFetcher<V> impl        │  Consumer       │ Matcher   │
+│  (plugin provides)            │  (plugin wires) │ (reuse)   │
+└────────────────────────────────────────────────────────────┘
+```
+
+- **Transport**, Your plugin implements `RecordFetcher<V>` to fetch records from the external system
+- **Orchestration**, Consumer classes wire fetch, decrypt, and pass to matchers
+- **Assertion**, Reuse ktestify-core's standard `RecordMatcher` implementations
+
+This separation means,
+
+- Adding a new transport does *not* require new matcher logic
+- Existing matchers automatically work with new transports
+- Plugins stay focused and maintainable
+
+---
+
+## Plugin Lifecycle
+
+1. **JVM Start**, ktestify initializes config, then discovers plugins
+2. **Classpath Phase**, `ServiceLoader` finds plugins on classpath (from Maven deps)
+3. **External Phase**, Scans `/workspace/plugins` or configured directory for external JARs
+4. **Initialize**, Each plugin's `initialize(PluginContext)` is called once (in discovery order)
+5. **Scenario Runs**, Cucumber runs scenarios, steps from plugins are available
+6. **Shutdown**, Each plugin's `shutdown()` is called once (reverse initialization order)
+
+If any plugin's `initialize()` fails, the entire test run aborts with `PluginException`.
+
+---
+
+## Best Practices
+
+1. **Use consistent IDs**, kebab-case like `azure-blob`, `ibm-mq` (not camelCase or UPPER_CASE)
+2. **Namespace config**, always use `ktestify.plugins.<id>` to avoid conflicts
+3. **Validate early**, fail in `initialize()` if critical config is missing
+4. **Release resources**, close connections and stop threads in `shutdown()`
+5. **Log diagnostics**, use SLF4J so users can troubleshoot plugin loading
+6. **Document thoroughly**, include config examples, step definitions, and usage scenarios
+7. **Follow the skeleton**, use the template repository as your starting point
+8. **Write tests**, unit tests for config parsing, integration tests with Docker
+
+---
+
+## Troubleshooting Plugins
+
+### Plugin Not Loading
+
+Check the startup log for the plugin system banner,
+
+```
+╔══ KTestify Plugin System ═════════════════════════════════════
+║  [classpath] Discovered plugin: azure-blob v1.0 ...
+║  2 plugin(s) active: [azure-blob@1.0, ibm-mq@1.5]
+╚═══════════════════════════════════════════════════════════════
+```
+
+If your plugin is missing,
+
+- On classpath? Verify JAR is included and `META-INF/services/io.github.ktestify.plugin.KtestifyPlugin` exists
+- External JAR? Check that `/workspace/plugins` (or `ktestify.plugins.dir`) contains the JAR
+- Run with `-Dorg.slf4j.simpleLogger.defaultLogLevel=debug` for detailed discovery logs
+
+### Plugin Initialization Failed
+
+```
+io.github.ktestify.exceptions.PluginException:
+  Plugin 'my-plugin' failed to initialize: Connection timeout
+```
+
+Check,
+
+- Is configuration present? Verify `ktestify.plugins.<id>` exists in config
+- Are credentials valid? Check environment variables or `application.conf`
+- Is the external service reachable? Test connectivity before running tests
+
+### Steps Not Discovered
+
+If steps from your plugin aren't available,
+
+- Verify `getGluePackage()` returns the correct package name
+- Check that step classes are in that exact package
+- Verify steps use `@Given`, `@When`, `@Then` from `io.cucumber.java.en`
+
+---
+
+## Next Steps
+
+- Learn [how plugins work](plugin-system)
+- [Build your first plugin](create-plugin)
+- Explore the [Azure Blob reference](azureblob)
+- Check out the [plugin skeleton](https://github.com/ktestify/ktestify-plugin-skeleton)
+

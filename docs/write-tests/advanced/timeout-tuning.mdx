@@ -11,14 +11,14 @@ KTestify has a custom Kafka Consumer that has a time-to-live (TTL) to prevent te
 
 ---
 
-## Layer 1 — Inner timeout (`KafkaRecordFetcher`)
+## Layer 1 : Inner timeout (`KafkaRecordFetcher`)
 
 The inner timeout controls how long the fetcher blocks waiting for records from Kafka. It maps to the Kafka `poll` loop.
 
 **Source of truth (highest to lowest priority):**
 
-1. `consumerReadTimeout` column in the DataTable (seconds) — per-step override
-2. `ktestify.consumer.read-timeout-ms` in properties map — per-consumer override
+1. `consumerReadTimeout` column in the DataTable (seconds), per-step override
+2. `ktestify.consumer.read-timeout-ms` in properties map, per-consumer override
 3. `ktestify.framework.timeouts.default-read-timeout` in HOCON config
 
 ```hocon
@@ -27,7 +27,7 @@ ktestify.framework.timeouts.default-read-timeout = 30s
 
 ---
 
-## Layer 2 — Outer safety net (`ExecutorService`)
+## Layer 2 : Outer safety net (`ExecutorService`)
 
 The orchestration layer submits the consumer to an `ExecutorService` and calls `.get(readTimeout + BUFFER_TIME)`. This catches JVM-level hangs that slip past the inner Kafka timeout.
 
@@ -35,7 +35,7 @@ The orchestration layer submits the consumer to an `ExecutorService` and calls `
 BUFFER_TIME = 5 000 ms   (ConfigConstants.BUFFER_TIME)
 ```
 
-So if `readTimeout = 30s`, the outer guard fires at `35s`. This is intentional — **do not remove it**.
+So if `readTimeout = 30s`, the outer guard fires at `35s`. This is intentional, **do not remove it**.
 
 ---
 
@@ -49,7 +49,7 @@ So if `readTimeout = 30s`, the outer guard fires at `35s`. This is intentional �
 | `ktestify.framework.timeouts.consumer-delta-time` | duration | `60s` |
 
 :::warning[Unit mismatch]
-`ConsumerContext.consumerDeltaTime` stores the value internally as **milliseconds**. The DataTable column is always in **seconds** — KTestify converts automatically. Never pass milliseconds to the DataTable.
+`ConsumerContext.consumerDeltaTime` stores the value internally as **milliseconds**. The DataTable column is always in **seconds**, KTestify converts automatically. Never pass milliseconds to the DataTable.
 :::
 
 ---
@@ -65,7 +65,7 @@ So if `readTimeout = 30s`, the outer guard fires at `35s`. This is intentional �
 
 ---
 
-## Example — per-step timeout override
+## Example : per-step timeout override
 
 ```gherkin
 Then expected record from file
@@ -75,7 +75,7 @@ Then expected record from file
 
 ---
 
-## Example — global config for slow environment
+## Example : global config for slow environment
 
 ```hocon
 ktestify {

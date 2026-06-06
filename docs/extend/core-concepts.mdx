@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: Core Concepts
-description: Key domain types in ktestify-core — ConsumedRecord, MatchContext, MatchResult, ConsumerContext, and more.
+description: Key domain types in ktestify-core, ConsumedRecord, MatchContext, MatchResult, ConsumerContext, and more.
 ---
 
 # Core Concepts
@@ -30,7 +30,7 @@ public class ConsumedRecord<V> {
 
 ## `MatchedRecord`
 
-Deduplication token — represents a record that has already been claimed by a consumer step. It holds `topic + partition + offset + key + timestamp` and is stored in the static deduplication registry.
+Deduplication token, represents a record that has already been claimed by a consumer step. It holds `topic + partition + offset + key + timestamp` and is stored in the static deduplication registry.
 
 `MatchedRecord` deliberately **excludes `processedTime`** from `equals`/`hashCode` so that two records from the same Kafka partition+offset are always considered the same, regardless of when they were processed.
 
@@ -50,7 +50,7 @@ public class MatchContext {
     String        matchKey;
     String        matchValue;
 
-    // Convenience — for single-record matchers
+    // Convenience, for single-record matchers
     public String getMatchFilePath() {
         return matchFilePaths != null && !matchFilePaths.isEmpty()
             ? matchFilePaths.get(0) : null;
@@ -118,7 +118,7 @@ public class Topic {
 
 ## `RecordMatcherFactory`
 
-Pure static factory — no DI, no singleton. Resolves the right `RecordMatcher` implementation based on `matchMethod` and whether the consumer is raw or Avro.
+Pure static factory, no DI, no singleton. Resolves the right `RecordMatcher` implementation based on `matchMethod` and whether the consumer is raw or Avro.
 
 ```java
 RecordMatcherFactory.forRaw("matchFile")   → FileRecordMatcher

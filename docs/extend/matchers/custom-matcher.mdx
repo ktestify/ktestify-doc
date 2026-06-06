@@ -6,7 +6,7 @@ description: How to implement and register your own RecordMatcher<V> in ktestify
 
 # Writing a Custom Matcher
 
-`RecordMatcher<V>` is a `@FunctionalInterface` — implementing one is straightforward. You can add custom comparison logic (schema-based validation, regex, binary format, etc.) without touching any existing code.
+`RecordMatcher<V>` is a `@FunctionalInterface`, implementing one is straightforward. You can add custom comparison logic (schema-based validation, regex, binary format, etc.) without touching any existing code.
 
 ---
 
@@ -100,8 +100,8 @@ Then expected record value matches regex
 
 ## Design rules to follow
 
-1. **Never throw from `match()`** — return `MatchResult.fail(...)` on assertion failure. Only throw `ComparisonException` for configuration errors (missing file, bad XPath expression, etc.).
-2. **Always handle empty `records` list** — the consumer may legitimately receive 0 records if the watcher step lets it.
+1. **Never throw from `match()`**, return `MatchResult.fail(...)` on assertion failure. Only throw `ComparisonException` for configuration errors (missing file, bad XPath expression, etc.).
+2. **Always handle empty `records` list**, the consumer may legitimately receive 0 records if the watcher step lets it.
 3. **Use `context.getMatchFilePath()`** (convenience accessor) for single-record matchers; iterate `context.getMatchFilePaths()` for batch matchers.
-4. **`excludedFields` defaults to `emptyList()`** — guard with `!context.getExcludedFields().isEmpty()` not `!= null`.
+4. **`excludedFields` defaults to `emptyList()`**, guard with `!context.getExcludedFields().isEmpty()` not `!= null`.
 

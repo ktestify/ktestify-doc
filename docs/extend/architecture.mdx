@@ -1,7 +1,7 @@
 ---
 sidebar_position: 1
 title: Architecture
-description: KTestify's three-layer architecture — Transport, Orchestration, and Assertion — and why it matters.
+description: KTestify's three-layer architecture. Transport, Orchestration, and Assertion, and why it matters.
 ---
 
 # Architecture
@@ -54,7 +54,7 @@ flowchart LR
 
 ## Layer responsibilities
 
-### Transport — `RecordFetcher<V>`
+### Transport - `RecordFetcher<V>`
 
 Knows: Kafka broker, partitions, offsets, deduplication.
 Does NOT know: matchers, files, test frameworks.
@@ -68,17 +68,17 @@ public interface RecordFetcher<V> extends AutoCloseable {
 }
 ```
 
-Swapping Kafka for IBM MQ means writing a new `IbmMqRecordFetcher<V>` — nothing else changes.
+Swapping Kafka for IBM MQ means writing a new `IbmMqRecordFetcher<V>`, nothing else changes.
 
 ---
 
-### Orchestration — `AbstractKafkaConsumer`
+### Orchestration - `AbstractKafkaConsumer`
 
 Knows: fetch → match → result wiring.
 Does NOT know: Kafka internals, comparison algorithms.
 
 ```java
-// AbstractKafkaConsumer.call() — simplified
+// AbstractKafkaConsumer.call(), simplified
 var fetcher = new KafkaRecordFetcher(context);
 try {
     List<ConsumedRecord<V>> records = fetcher.fetch();      // transport
@@ -94,7 +94,7 @@ try {
 
 ---
 
-### Assertion — `RecordMatcher<V>`
+### Assertion - `RecordMatcher<V>`
 
 Knows: `ConsumedRecord`, expected values, comparison algorithm.
 Does NOT know: Kafka, IBM MQ, any transport.
@@ -177,7 +177,7 @@ RecordMatcher<V>  (@FunctionalInterface)
 ## See also
 
 - [Core concepts →](core-concepts)
-- [Transports — Kafka →](transports/kafka)
+- [Transports, Kafka →](transports/kafka)
 - [Adding a transport →](transports/adding-a-transport)
 - [Built-in matchers →](matchers/built-in-matchers)
 

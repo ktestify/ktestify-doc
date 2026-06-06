@@ -1,15 +1,16 @@
 ---
 sidebar_position: 1
 title: Overview
-description: How to structure a KTestify feature file — Background, Scenarios, and a real-world order processing example.
+description: How to structure a KTestify feature file, Background, Scenarios, and a real-world order processing example.
 ---
 
 # Writing Tests with KTestify
 
-KTestify tests are **Gherkin feature files**. If you've written BDD tests before, the format will feel familiar. If not — don't worry, it reads almost like plain English.
+KTestify tests are **Gherkin feature files**. If you've written BDD tests before, the format will feel familiar. If not, don't worry, it reads almost like plain English.
 
-A feature file has two building blocks :
+A feature file has two building blocks:
 
+---
 ## The Background
 
 The `Background` runs **once before every scenario** in the file. This is where you declare everything your tests will need: which topics exist, what namespace they live in, where your asset files are.
@@ -28,7 +29,7 @@ Background:
     | topicName        | topicAlias    |
     | enriched-orders  | enriched-out  |
   Given assets directory
-    | absolutePath                                             |
+    | absolutePath                                              |
     | /workspace/features/order-from-partner/assets            |
 ```
 
@@ -40,8 +41,8 @@ You declare this **once per feature file**. Every scenario that follows shares t
 
 Each `Scenario` describes one test flow. It has two parts:
 
-- **`When`** — the action: send a message, trigger something, wait.
-- **`Then`** — the assertion: what record do you expect to appear on the output topic?
+- **`When`**, the action: send a message, trigger something, wait.
+- **`Then`**, the assertion: what record do you expect to appear on the output topic?
 
 ```gherkin
 Scenario: Partner order is converted and enriched
@@ -53,11 +54,11 @@ Scenario: Partner order is converted and enriched
     | enriched-out  | order-enriched.json   | timestamp    |
 ```
 
-That's it. KTestify handles everything in between — producing the message, waiting for the output topic to respond, fetching the record, and comparing it against your expected file.
+That's it. KTestify handles everything in between, producing the message, waiting for the output topic to respond, fetching the record, and comparing it against your expected file.
 
 ---
 
-## A real example — Order from partner
+## A real example, Order from partner
 
 Let's say you have this system:
 
@@ -133,7 +134,7 @@ Feature: Order from partner
 ```
 
 Notice:
-- The **Background** declares topics and the schema once — both scenarios reuse them.
+- The **Background** declares topics and the schema once, both scenarios reuse them.
 - **Scenario 1** sends a valid order and asserts the enriched output.
 - **Scenario 2** sends a bad order and asserts that *nothing* reaches the output topic.
 - File paths (`order.json`, `order-enriched.json`) are relative to the `assets` directory.
@@ -157,7 +158,7 @@ order-from-partner/
 
 ## Next steps
 
-- 📖 [Background steps →](background/namespaces) — all `Given` steps explained
-- 📖 [Action steps →](actions/send-raw-record) — `When` steps: sending raw and Avro records
-- 📖 [Assertion steps →](assertions/raw-matchers) — `Then` steps: every matcher type
-- 📖 [Full step reference →](step-reference) — complete DataTable column reference
+-  [Background steps →](background/namespaces), all `Given` steps explained
+-  [Action steps →](actions/send-raw-record), `When` steps: sending raw and Avro records
+-  [Assertion steps →](assertions/raw-matchers), `Then` steps: every matcher type
+-  [Full step reference →](step-reference), complete DataTable column reference

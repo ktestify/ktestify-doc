@@ -1,100 +1,361 @@
 ---
 sidebar_position: 2
 title: Azure Blob Plugin
-description: ktestify-plugin-azureblob — upload and validate files in Azure Blob Storage as part of your Kafka test scenarios.
+description: ktestify-plugin-azureblob, upload and validate files in Azure Blob Storage as part of your Kafka test scenarios.
 ---
 
 # Azure Blob Storage Plugin
 
-`ktestify-plugin-azureblob` is a KTestify plugin that adds Azure Blob Storage steps to your Cucumber scenarios. It allows you to upload blobs as test fixtures or assert that a blob was produced by your pipeline.
+`ktestify-plugin-azureblob` is a first-party KTestify plugin that integrates Azure Blob Storage into your Kafka testing workflows. It allows you to upload blobs as test fixtures before producing Kafka messages, and assert that your pipeline correctly wrote output blobs.
 
 :::caution[Work in progress]
-This plugin is actively being built. The API surface, step wording, and configuration keys documented here reflect the current implementation and may change before the first stable release.
+This plugin is actively being developed. The API surface, step definitions, and configuration keys may evolve before the first stable release.
 :::
 
 ---
 
-## Maven dependency
+## When to Use
+
+Use the Azure Blob plugin when your system,
+
+- Reads input files from Azure Blob Storage before processing Kafka messages
+- Writes result files to Azure Blob Storage after consuming Kafka topics
+- Needs to validate blob content as part of end-to-end test scenarios
+- Must test Azure Storage and Kafka integration together
+
+---
+
+## Installation
+
+### Maven Dependency
 
 ```xml
 <dependency>
-  <groupId>io.github.ktestify</groupId>
-  <artifactId>ktestify-plugin-azureblob</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
-  <scope>test</scope>
+    <groupId>io.github.ktestify</groupId>
+    <artifactId>ktestify-plugin-azureblob</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <scope>test</scope>
 </dependency>
+```
+
+### With ktestify-cucumber (Docker)
+
+Drop the plugin JAR into `/workspace/plugins` and ktestify will auto-discover it via `ServiceLoader`,
+
+```bash
+docker run --rm \
+  -v $(pwd)/features:/workspace/features \
+  -v $(pwd)/assets:/workspace/assets \
+  -v $(pwd)/plugins:/workspace/plugins \
+  -e AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=..." \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  /workspace/features
 ```
 
 ---
 
 ## Configuration
 
+The plugin reads settings from `ktestify.plugins.azure-blob` in your HOCON configuration file. Place your configuration in `application.conf` or override via environment variables.
+
+### Configuration Keys
+
 ```hocon
-ktestify {
-  azureblob {
-    connection-string = "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
-    # Or use individual settings:
-    # account-name = "myaccount"
-    # account-key  = "..."
-  }
+ktestify.plugins.azure-blob {
+  # Connection string (primary, recommended)
+  # Takes precedence over SAS token or account key approaches
+  connection-string = "DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net"
+  connection-string = ${?AZURE_STORAGE_CONNECTION_STRING}
+
+  # Alternatively: SAS token (when connection-string is not set)
+  sas-token = ""
+  sas-token = ${?AZURE_STORAGE_SAS_TOKEN}
+
+  # Storage account endpoint (required when using SAS or managed identity)
+  endpoint = "https://myaccount.blob.core.windows.net"
+  endpoint = ${?AZURE_STORAGE_ENDPOINT}
+
+  # Timeout for individual blob operations (upload, download, list)
+  request-timeout = 30s
+  request-timeout = ${?KTESTIFY_AZURE_BLOB_REQUEST_TIMEOUT}
+
+  # Automatically create containers if they don't exist
+  auto-create-containers = true
+  auto-create-containers = ${?KTESTIFY_AZURE_BLOB_AUTO_CREATE}
+}
+```
+
+### Configuration Priority
+
+1. System properties (e.g. `-Dktestify.plugins.azure-blob.connection-string=...`)
+2. Environment variables (e.g. `AZURE_STORAGE_CONNECTION_STRING`)
+3. `application.conf` in classpath
+4. Plugin's `reference.conf` (defaults)
+
+---
+
+## Gherkin Steps
+
+### Background, Register a Blob Container
+
+Before using the Azure Blob steps, register a container with an alias in your scenario background,
+
+```gherkin
+Background:
+  Given Azure Blob container
+    | containerName  | containerAlias |
+    | test-inputs    | input-blobs    |
+    | test-outputs   | output-blobs   |
+```
+
+| Column | Description |
+|---|---|
+| `containerName` | Actual Azure container name |
+| `containerAlias` | Alias used in later steps (e.g. `input-blobs`) |
+
+### Action, Upload a Blob from File
+
+Upload a local file to Azure Blob Storage before running your action,
+
+```gherkin
+When blob from file is uploaded
+  | containerAlias | blobName         | file            | tags             |
+  | input-blobs    | orders/order.json| order.json      | env=test,type=order |
+```
+
+| Column | Description | Optional |
+|---|---|---|
+| `containerAlias` | The registered container alias | No |
+| `blobName` | Target blob path in container | No |
+| `file` | Local file path (relative to assets dir) | No |
+| `tags` | Blob tags as key=value pairs (comma-separated) | Yes |
+
+### Validation, Assert Blob Content
+
+Validate that a blob exists and matches expected content,
+
+```gherkin
+Then expected blob from file
+  | containerAlias | blobName              | file              | readTimeout |
+  | output-blobs   | orders/order.json     | expected.json     | 30          |
+```
+
+| Column | Description | Optional |
+|---|---|---|
+| `containerAlias` | The registered container alias | No |
+| `blobName` | Blob path to validate | No |
+| `file` | Expected file path (relative to assets dir) | No |
+| `readTimeout` | How long to wait for blob to appear (seconds) | Yes, default 30 |
+
+### Negative Assertion, Assert Blob Does Not Exist
+
+```gherkin
+And blob should not exist
+  | containerAlias | blobName              |
+  | output-blobs   | orders/error-file.json|
+```
+
+---
+
+## Complete Scenario Example
+
+```gherkin
+Feature: Order processor writes results to Azure Blob
+
+  Background:
+    Given namespace
+      | namespace       |
+      | test-namespace  |
+    Given input topic
+      | topicName   | topicAlias  |
+      | orders-in   | orders      |
+    Given output topic
+      | topicName   | topicAlias  |
+      | orders-out  | results     |
+    Given Azure Blob container
+      | containerName | containerAlias |
+      | inputs        | input-blobs    |
+      | outputs       | output-blobs   |
+    Given assets directory
+      | absolutePath |
+      | src/test/resources/data |
+
+  Scenario: Process order and write result blob
+    Given blob from file is uploaded
+      | containerAlias | blobName       | file       |
+      | input-blobs    | order-001.json | order.json |
+
+    When record from file is sent
+      | topicName | file              | recordKey |
+      | orders-in | order-trigger.json| ORD-001   |
+
+    And wait for 5 seconds
+
+    Then expected record from file
+      | topicName | file              |
+      | orders-out| order-result.json |
+
+    And expected blob from file
+      | containerAlias | blobName          | file              |
+      | output-blobs   | order-001-result  | expected-blob.json|
+```
+
+---
+
+## Local Development with Azurite
+
+For local testing and CI/CD, use the [Azurite](https://github.com/Azure/Azurite) emulator instead of a real Azure account,
+
+### Start Azurite
+
+```bash
+docker run -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --loose
+```
+
+### Configure for Local Testing
+
+Add this to your test `application.conf`,
+
+```hocon
+ktestify.plugins.azure-blob {
+  connection-string = "UseDevelopmentStorage=true"
+}
+```
+
+Or set the environment variable,
+
+```bash
+export AZURE_STORAGE_CONNECTION_STRING="UseDevelopmentStorage=true"
+```
+
+The plugin will automatically use the local Azurite instance running on `127.0.0.1:10000`.
+
+---
+
+## Implementation Structure
+
+The plugin follows the three-layer architecture defined by ktestify-core,
+
+```
+ktestify-plugin-azureblob/
+└── src/main/java/io/github/ktestify/azureblob/
+    ├── AzureBlobPlugin.java              ← KtestifyPlugin SPI impl
+    ├── config/
+    │   └── AzureBlobConfig.java          ← reads ktestify.plugins.azure-blob HOCON
+    ├── entities/
+    │   └── KtestifyBlobContainer.java    ← container metadata model
+    ├── io/
+    │   ├── AzureBlobClient.java          ← Azure SDK wrapper (lifecycle)
+    │   └── AzureBlobRecordFetcher.java   ← implements RecordFetcher<String>
+    ├── services/
+    │   ├── BlobUploadService.java        ← upload logic
+    │   └── BlobValidationService.java    ← content matching
+    └── steps/
+        ├── AzureBlobBackgroundSteps.java
+        ├── AzureBlobActionSteps.java
+        ├── AzureBlobValidationSteps.java
+        └── SharedAzureBlobResources.java  ← scenario-scoped state
+```
+
+**Key layers :**
+
+- **Transport**, `AzureBlobRecordFetcher` implements `RecordFetcher<String>` and polls Azure Blob Storage
+- **Orchestration**, Service classes wire upload, fetch, and validation
+- **Assertion**, Reuses standard `RecordMatcher` implementations from ktestify-core
+
+---
+
+## Error Handling
+
+### Container Does Not Exist
+
+If `auto-create-containers = true` (default), the plugin automatically creates missing containers. Otherwise,
+
+```
+io.github.ktestify.exceptions.PluginException:
+  Container 'test-inputs' does not exist.
+  Set auto-create-containers=true or create it manually.
+```
+
+### Authentication Failed
+
+```
+io.github.ktestify.exceptions.PluginException:
+  Azure Blob authentication failed.
+  Verify AZURE_STORAGE_CONNECTION_STRING or credentials in config.
+```
+
+### Blob Not Found
+
+If a blob is not found within `readTimeout`,
+
+```
+AssertionError: Blob not found within 30s: orders/order.json
+```
+
+Check that,
+- The container name and blob path are correct
+- The previous step that was supposed to create the blob ran successfully
+- The timeout value is sufficient for your system's latency
+
+---
+
+## Advanced Topics
+
+### Dynamic Blob Names
+
+Use ktestify's dynamic variable syntax in blob names,
+
+```gherkin
+Then expected blob from file
+  | containerAlias | blobName                           | file         |
+  | output-blobs   | {{env:ORDER_ID}}/result-{{date}}.json | expected.json|
+```
+
+See [Dynamic Variables](../../write-tests/dynamic-variables) for the full syntax.
+
+### Accessing Created Blobs in Code
+
+If you need to access blob data from Java test code,
+
+```java
+@Inject SharedAzureBlobResources resources;
+
+@Test
+public void myTest() {
+    // Upload
+    resources.uploadBlob("input-blobs", "test.json", new File("payload.json"));
+
+    // Download
+    String content = resources.downloadBlobAsString("output-blobs", "result.json");
+    assertThat(content).contains("expected-value");
 }
 ```
 
 ---
 
-## Gherkin steps (planned)
+## Troubleshooting
 
-### Background
-
-```gherkin
-Given Azure Blob container
-  | containerName | containerAlias |
-  | test-output   | blobs          |
-```
-
-### Action
-
-```gherkin
-When blob from file is uploaded
-  | containerAlias | blobName    | file            |
-  | blobs          | order.json  | payload.json    |
-```
-
-### Assertion
-
-```gherkin
-Then expected blob from file
-  | containerAlias | blobName      | file            |
-  | blobs          | output.json   | expected.json   |
-```
+| Issue | Solution |
+|---|---|
+| Plugin not discovered | Ensure JAR is in classpath or `/workspace/plugins`, check logs for `ServiceLoader` errors |
+| "Container does not exist" | Set `auto-create-containers = true` or create the container in Azure Portal |
+| Timeout waiting for blob | Increase `readTimeout` parameter or check that the producing system wrote the blob |
+| "Invalid connection string" | Verify the format, use `DefaultEndpointsProtocol=https;...` for real Azure or `UseDevelopmentStorage=true` for Azurite |
 
 ---
 
-## Implementation structure
+## Contributing
 
-```
-ktestify-plugin-azureblob/
-└── src/main/java/io/github/ktestify/azureblob/
-    ├── AzureBlobPlugin.java              ← KtestifyPlugin impl
-    ├── config/
-    │   └── AzureBlobConfig.java          ← reads HOCON config
-    ├── entities/
-    │   └── KtestifyBlobContainer.java    ← container entity
-    ├── io/
-    │   └── AzureBlobClient.java          ← Azure SDK wrapper
-    ├── services/
-    │   ├── AzureBlobUploadService.java
-    │   └── AzureBlobValidationService.java
-    └── steps/
-        ├── AzureBlobBackgroundSteps.java
-        ├── AzureBlobActionSteps.java
-        ├── AzureBlobValidationSteps.java
-        └── SharedAzureBlobResources.java
-```
+The Azure Blob plugin is actively maintained. Report issues and contribute improvements at,
+
+[ktestify-plugin-azureblob on GitHub](https://github.com/ktestify/ktestify-plugin-azureblob)
 
 ---
 
-## Tracking
+## See Also
 
-Follow progress and contribute at [ktestify-plugin-azureblob on GitHub](https://github.com/ktestify/ktestify-plugin-azureblob).
+- [Plugin System Overview](plugin-system), how plugins work
+- [Creating a Plugin](create-plugin), build your own plugin from scratch
+- [ktestify-core Docs](https://github.com/ktestify/ktestify-core), transport and matcher internals
 

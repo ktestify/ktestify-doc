@@ -10,7 +10,7 @@ Avro matchers deserialise `GenericRecord` values (via Schema Registry) and compa
 
 ---
 
-## File match — `Then expected record from file based on schema`
+## File match : `Then expected record from file based on schema`
 
 Fetches an Avro record, converts it to JSON, and compares it against an expected JSON file. Excludes specified top-level keys from comparison.
 
@@ -31,7 +31,7 @@ Then expected record from file based on schema
 
 ---
 
-## Key + file match — `Then expected record with key and value from file based on schema`
+## Key + file match : `Then expected record with key and value from file based on schema`
 
 Asserts both the record **key** and **value** (as Avro → JSON) against a file.
 
@@ -43,7 +43,7 @@ Then expected record with key and value from file based on schema
 
 ---
 
-## Field value match — `Then expected record based on schema should have fields matching from given value`
+## Field value match : `Then expected record based on schema should have fields matching from given value`
 
 Asserts one or more specific Avro field values without a file.
 
@@ -61,7 +61,7 @@ Then expected record based on schema should have fields matching from given valu
 
 ---
 
-## Key match — `Then expected Avro record should match key`
+## Key match : `Then expected Avro record should match key`
 
 Asserts only the **record key**; the Avro value is ignored.
 
@@ -73,7 +73,7 @@ Then expected record based on schema should match key
 
 ---
 
-## Positional fields — `Then expected record based on schema should have fields matching from file`
+## Positional fields : `Then expected record based on schema should have fields matching from file`
 
 Assert a specific character range of the JSON-serialised Avro value.
 

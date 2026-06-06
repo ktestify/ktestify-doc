@@ -1,0 +1,859 @@
+---
+sidebar_position: 3
+title: Creating a Plugin
+description: Step-by-step guide to building your own KTestify plugin with real examples.
+---
+
+# Creating a KTestify Plugin
+
+This guide walks you through building a complete KTestify plugin from scratch. We'll use a fictional **Example Plugin** that reads and validates records from a hypothetical Example Transport.
+
+:::info
+A KTestify plugin typically has two main responsibilities:
+1. Implement the `KtestifyPlugin` SPI interface
+2. Provide Cucumber step definitions that users can call in Gherkin
+:::
+
+---
+
+## Phase 0: Project Setup
+
+### Clone the Skeleton
+
+The easiest way to start is with the plugin skeleton template:
+
+```bash
+git clone https://github.com/ktestify/ktestify-plugin-skeleton.git \
+  ktestify-plugin-example
+
+cd ktestify-plugin-example
+```
+
+Or you can set up from scratch with Maven:
+
+```bash
+mvn archetype:generate \
+  -DgroupId=io.github.ktestify \
+  -DartifactId=ktestify-plugin-example \
+  -DarchetypeArtifactId=maven-archetype-quickstart \
+  -Dpackage=io.github.ktestify.example
+```
+
+### POM configuration
+
+Here's the essential POM setup:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" ...>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>io.github.ktestify</groupId>
+    <artifactId>ktestify-plugin-example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>KTestify Example Plugin</name>
+    <description>Example plugin demonstrating RecordFetcher implementation</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ktestify-core provides the plugin SPI and matching infrastructure -->
+            <dependency>
+                <groupId>io.github.ktestify</groupId>
+                <artifactId>ktestify-core</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+                <scope>provided</scope>
+            </dependency>
+            <!-- Typesafe Config for HOCON parsing -->
+            <dependency>
+                <groupId>com.typesafe</groupId>
+                <artifactId>config</artifactId>
+                <version>1.4.3</version>
+            </dependency>
+            <!-- Logging -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>2.0.11</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>2.23.0</version>
+                <scope>test</scope>
+            </dependency>
+            <!-- Cucumber for step definitions -->
+            <dependency>
+                <groupId>io.cucumber</groupId>
+                <artifactId>cucumber-java</artifactId>
+                <version>7.15.0</version>
+            </dependency>
+            <!-- Lombok for @Slf4j annotation -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>1.18.30</version>
+                <scope>provided</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+---
+
+## Phase 1: Create the Plugin Class
+
+### Step 1.1, Implement KtestifyPlugin
+
+Create `src/main/java/io/github/ktestify/example/ExamplePlugin.java`:
+
+```java
+package io.github.ktestify.example;
+
+import io.github.ktestify.example.config.ExampleConfig;
+import io.github.ktestify.plugin.KtestifyPlugin;
+import io.github.ktestify.plugin.PluginContext;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * KTestify plugin for the Example transport.
+ *
+ * Implementation summary,
+ * - Loads config from ktestify.plugins.example in HOCON
+ * - Provides Cucumber steps in io.github.ktestify.example.steps package
+ * - Manages the ExampleClient singleton lifecycle
+ */
+@Slf4j
+public class ExamplePlugin implements KtestifyPlugin {
+
+    private static final String PLUGIN_ID = "example";
+    private static final String VERSION = "1.0-SNAPSHOT";
+
+    // Shared client singleton across all scenarios
+    private ExampleClient exampleClient;
+
+    @Override
+    public String getId() {
+        return PLUGIN_ID;
+    }
+
+    @Override
+    public String getVersion() {
+        return VERSION;
+    }
+
+    @Override
+    public String getAuthorName() {
+        return "Your Team";
+    }
+
+    @Override
+    public String getAuthorEmail() {
+        return "your-team@example.com";
+    }
+
+    @Override
+    public String getGluePackage() {
+        return "io.github.ktestify.example.steps";
+    }
+
+    @Override
+    public void initialize(PluginContext context) {
+        log.info("Initializing {} plugin v{}…", getId(), getVersion());
+
+        // Load plugin configuration
+        ExampleConfig cfg = ExampleConfig.from(context.getConfig().getRaw());
+
+        // Validate required settings
+        if (!cfg.hasEndpoint()) {
+            throw new io.github.ktestify.exceptions.PluginException(
+                    "Example plugin requires 'endpoint' configuration. "
+                            + "Set KTESTIFY_EXAMPLE_ENDPOINT or add to application.conf");
+        }
+
+        // Initialize shared client
+        this.exampleClient = new ExampleClient(cfg);
+        log.info("{} plugin initialized successfully.", getId());
+    }
+
+    @Override
+    public void shutdown() {
+        if (exampleClient != null) {
+            try {
+                exampleClient.close();
+                log.info("{} plugin shut down.", getId());
+            } catch (Exception e) {
+                log.warn("Error closing {} client: {}", getId(), e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Retrieve the shared Example client (for use by step definitions).
+     */
+    public ExampleClient getClient() {
+        return exampleClient;
+    }
+}
+```
+
+### Step 1.2, Create the Configuration Class
+
+Create `src/main/java/io/github/ktestify/example/config/ExampleConfig.java`:
+
+```java
+package io.github.ktestify.example.config;
+
+import com.typesafe.config.Config;
+import java.time.Duration;
+import lombok.Value;
+
+/**
+ * Configuration for the Example plugin.
+ * Reads from ktestify.plugins.example in HOCON.
+ */
+@Value
+public class ExampleConfig {
+
+    private final String endpoint;
+    private final String apiKey;
+    private final Duration readTimeout;
+
+    public static ExampleConfig from(Config fullConfig) {
+        Config cfg = fullConfig.getConfig("ktestify.plugins.example");
+
+        return new ExampleConfig(
+                cfg.getString("endpoint"),
+                cfg.getString("api-key"),
+                cfg.getDuration("read-timeout"));
+    }
+
+    public boolean hasEndpoint() {
+        return endpoint != null && !endpoint.isBlank();
+    }
+
+    public boolean hasApiKey() {
+        return apiKey != null && !apiKey.isBlank();
+    }
+}
+```
+
+### Step 1.3, Create the Transport Client
+
+Create `src/main/java/io/github/ktestify/example/ExampleClient.java`:
+
+```java
+package io.github.ktestify.example;
+
+import io.github.ktestify.example.config.ExampleConfig;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Wrapper around the external Example Transport SDK.
+ * This is where you interact with the actual external system.
+ */
+@Slf4j
+public class ExampleClient implements AutoCloseable {
+
+    private final ExampleConfig config;
+    // Replace with your actual SDK client
+    // private final ExternalSdkClient sdkClient;
+
+    public ExampleClient(ExampleConfig config) {
+        this.config = config;
+        // Initialize SDK client
+        // this.sdkClient = new ExternalSdkClient()
+        //     .withEndpoint(config.getEndpoint())
+        //     .withApiKey(config.getApiKey())
+        //     .build();
+        log.debug("ExampleClient initialized with endpoint: {}", config.getEndpoint());
+    }
+
+    /**
+     * Fetch records from the Example source.
+     * This is called by ExampleRecordFetcher.
+     */
+    public String fetchRecord(String recordId) {
+        // Call the external SDK
+        // return sdkClient.get(recordId);
+        return "example-record-content";
+    }
+
+    @Override
+    public void close() throws Exception {
+        // Clean up SDK resources
+        // if (sdkClient != null) sdkClient.close();
+        log.debug("ExampleClient closed");
+    }
+}
+```
+
+---
+
+## Phase 2: Create the Transport Layer
+
+### Step 2.1, Implement RecordFetcher
+
+This is how ktestify-core will fetch records from your transport. Create `src/main/java/io/github/ktestify/example/transport/ExampleRecordFetcher.java`:
+
+```java
+package io.github.ktestify.example.transport;
+
+import io.github.ktestify.example.ExamplePlugin;
+import io.github.ktestify.io.RecordFetcher;
+import io.github.ktestify.models.ConsumedRecord;
+import io.github.ktestify.plugin.PluginRegistry;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Fetches records from the Example transport.
+ *
+ * Implements the RecordFetcher interface from ktestify-core,
+ * which separates transport concerns from matching logic.
+ */
+@Slf4j
+public class ExampleRecordFetcher implements RecordFetcher<String> {
+
+    private final String recordId;
+    private final Long readTimeout;
+
+    public ExampleRecordFetcher(String recordId, Long readTimeout) {
+        this.recordId = recordId;
+        this.readTimeout = readTimeout != null ? readTimeout : 30_000L;
+    }
+
+    @Override
+    public List<ConsumedRecord<String>> fetch() {
+        log.debug("Fetching record: {} (timeout: {}ms)", recordId, readTimeout);
+
+        long startTime = System.currentTimeMillis();
+        List<ConsumedRecord<String>> records = new ArrayList<>();
+
+        while (System.currentTimeMillis() - startTime < readTimeout) {
+            try {
+                // Get the Example plugin
+                ExamplePlugin plugin = (ExamplePlugin) PluginRegistry.load(null).getPlugins()
+                        .stream()
+                        .filter(p -> p.getId().equals("example"))
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException("Example plugin not loaded"));
+
+                // Fetch from the transport
+                String content = plugin.getClient().fetchRecord(recordId);
+
+                if (content != null) {
+                    ConsumedRecord<String> record = ConsumedRecord.<String>builder()
+                            .topic("example-topic")
+                            .partition(0)
+                            .offset(1L)
+                            .timestamp(Instant.now())
+                            .key(recordId)
+                            .value(content)
+                            .build();
+
+                    records.add(record);
+                    log.debug("Record found: {}", recordId);
+                    return records;
+                }
+
+                // Not found yet, wait and retry
+                Thread.sleep(100);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        log.warn("Record not found within timeout: {} ({}ms)", recordId, readTimeout);
+        return records;
+    }
+}
+```
+
+### Step 2.2, Create the Consumer Orchestrator
+
+Create `src/main/java/io/github/ktestify/example/orchestration/ExampleConsumer.java`:
+
+```java
+package io.github.ktestify.example.orchestration;
+
+import io.github.ktestify.example.transport.ExampleRecordFetcher;
+import io.github.ktestify.io.RecordFetcher;
+import io.github.ktestify.match.RecordMatcher;
+import io.github.ktestify.match.RecordMatcherFactory;
+import io.github.ktestify.models.ConsumerContext;
+import io.github.ktestify.models.ConsumedRecord;
+import java.util.List;
+import java.util.concurrent.Callable;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Orchestrates the Example transport flow: fetch, record → match.
+ *
+ * This is the "orchestration layer" that wires together:
+ * - Transport (RecordFetcher)
+ * - Assertion (RecordMatcher from ktestify-core)
+ */
+@Slf4j
+public class ExampleConsumer implements Callable<Boolean> {
+
+    private final ConsumerContext<String, String> context;
+    private final RecordMatcher<String> matcher;
+
+    public ExampleConsumer(ConsumerContext<String, String> context) {
+        this.context = context;
+        // Use the matcher specified in context or resolve a default
+        this.matcher = RecordMatcherFactory.forRaw(context.getMatchMethod());
+    }
+
+    @Override
+    public Boolean call() throws Exception {
+        log.info("Starting Example consumer (timeout: {}ms)", context.getReadTimeout());
+
+        // Phase 1: Fetch records using our transport fetcher
+        RecordFetcher<String> fetcher = new ExampleRecordFetcher(
+                context.getExpectedRecordKey(), context.getReadTimeout());
+
+        List<ConsumedRecord<String>> records = fetcher.fetch();
+
+        if (records.isEmpty()) {
+            log.warn("No records fetched from Example transport");
+            return false;
+        }
+
+        // Phase 2: Match records using ktestify matchers
+        var matchResult = matcher.match(records, context);
+
+        if (matchResult.passed()) {
+            log.info("Example consumer: assertion PASSED");
+            return true;
+        } else {
+            log.error("Example consumer: assertion FAILED, {}", matchResult.getDiffMessage());
+            return false;
+        }
+    }
+}
+```
+
+---
+
+## Phase 3: Create Cucumber Step Definitions
+
+### Step 3.1, Background Steps
+
+Create `src/main/java/io/github/ktestify/example/steps/BackgroundSteps.java`:
+
+```java
+package io.github.ktestify.example.steps;
+
+import io.cucumber.datatable.DataTable;
+import io.cucumber.java.en.Given;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Cucumber steps for setting up the Example transport in Gherkin scenarios.
+ * These are called in the Background to configure test resources.
+ */
+@Slf4j
+public class BackgroundSteps {
+
+    private final SharedExampleResources resources;
+
+    public BackgroundSteps(SharedExampleResources resources) {
+        this.resources = resources;
+    }
+
+    /**
+     * Register an Example record source in the scenario context.
+     *
+     * Example usage:
+     *   Given Example source
+     *     | sourceName | sourceAlias | readTimeout |
+     *     | source-1   | main        | 30          |
+     */
+    @Given("Example source")
+    public void givenExampleSource(DataTable table) {
+        var row = table.asMap(String.class, String.class);
+        String sourceName = row.get("sourceName");
+        String sourceAlias = row.get("sourceAlias");
+        Integer readTimeout = row.get("readTimeout") != null
+                ? Integer.parseInt(row.get("readTimeout"))
+                : 30;
+
+        log.info("Registering Example source: {} (alias: {})", sourceName, sourceAlias);
+        resources.registerSource(sourceAlias, sourceName, readTimeout * 1000L);
+    }
+}
+```
+
+### Step 3.2, Action Steps
+
+Create `src/main/java/io/github/ktestify/example/steps/ActionSteps.java`:
+
+```java
+package io.github.ktestify.example.steps;
+
+import io.cucumber.datatable.DataTable;
+import io.cucumber.java.en.When;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Steps that perform actions: produce records, upload files, etc.
+ */
+@Slf4j
+public class ActionSteps {
+
+    private final SharedExampleResources resources;
+
+    public ActionSteps(SharedExampleResources resources) {
+        this.resources = resources;
+    }
+
+    /**
+     * Send a record to an Example source.
+     *
+     * Example usage:
+     *   When record is sent to Example
+     *     | sourceAlias | recordId    | payload                    |
+     *     | main        | REC-12345   | {"order": "ORD-001"}       |
+     */
+    @When("record is sent to Example")
+    public void whenRecordIsSentToExample(DataTable table) {
+        var row = table.asMap(String.class, String.class);
+        String sourceAlias = row.get("sourceAlias");
+        String recordId = row.get("recordId");
+        String payload = row.get("payload");
+
+        log.info("Sending record {} to source {}", recordId, sourceAlias);
+        resources.sendRecord(sourceAlias, recordId, payload);
+    }
+}
+```
+
+### Step 3.3, Validation Steps
+
+Create `src/main/java/io/github/ktestify/example/steps/ValidationSteps.java`:
+
+```java
+package io.github.ktestify.example.steps;
+
+import io.cucumber.datatable.DataTable;
+import io.cucumber.java.en.Then;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Steps for asserting on records: "Then expected record..."
+ */
+@Slf4j
+public class ValidationSteps {
+
+    private final SharedExampleResources resources;
+
+    public ValidationSteps(SharedExampleResources resources) {
+        this.resources = resources;
+    }
+
+    /**
+     * Validate a record against expected content.
+     *
+     * Example usage:
+     *   Then expected record from Example
+     *     | sourceAlias | recordId | file             | readTimeout |
+     *     | main        | REC-001  | expected.json    | 30          |
+     */
+    @Then("expected record from Example")
+    public void thenExpectedRecordFromExample(DataTable table) {
+        var row = table.asMap(String.class, String.class);
+        String sourceAlias = row.get("sourceAlias");
+        String recordId = row.get("recordId");
+        String file = row.get("file");
+        Integer readTimeout = row.get("readTimeout") != null
+                ? Integer.parseInt(row.get("readTimeout"))
+                : 30;
+
+        log.info("Validating record {} from {} (timeout: {}s)", recordId, sourceAlias, readTimeout);
+        boolean passed = resources.validateRecord(sourceAlias, recordId, file, readTimeout * 1000L);
+
+        if (!passed) {
+            throw new AssertionError("Record validation failed: " + recordId);
+        }
+    }
+}
+```
+
+### Step 3.4, Shared Resources
+
+Create `src/main/java/io/github/ktestify/example/steps/SharedExampleResources.java`:
+
+```java
+package io.github.ktestify.example.steps;
+
+import io.github.ktestify.example.orchestration.ExampleConsumer;
+import io.github.ktestify.models.ConsumerContext;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Holds shared state and resources across Example steps within a single scenario.
+ * Injected by Cucumber into step classes via PicoContainer.
+ */
+@Slf4j
+public class SharedExampleResources {
+
+    private final java.util.Map<String, ExampleSourceContext> sources = new java.util.HashMap<>();
+
+    static class ExampleSourceContext {
+        String sourceName;
+        Long readTimeout;
+
+        ExampleSourceContext(String sourceName, Long readTimeout) {
+            this.sourceName = sourceName;
+            this.readTimeout = readTimeout;
+        }
+    }
+
+    void registerSource(String alias, String sourceName, Long readTimeout) {
+        sources.put(alias, new ExampleSourceContext(sourceName, readTimeout));
+    }
+
+    void sendRecord(String sourceAlias, String recordId, String payload) {
+        // TODO: implement sending logic
+        log.info("Sent record {} to source {}", recordId, sourceAlias);
+    }
+
+    boolean validateRecord(String sourceAlias, String recordId, String file, Long readTimeout) {
+        ExampleSourceContext ctx = sources.get(sourceAlias);
+        if (ctx == null) {
+            throw new IllegalArgumentException("Source not registered: " + sourceAlias);
+        }
+
+        // Build a ConsumerContext for the assertion
+        ConsumerContext<String, String> consumerCtx = ConsumerContext.<String, String>builder()
+                .matchMethod(io.github.ktestify.match.RecordMatcherFactory.METHOD_MATCH_FILE)
+                .matchFilePath(file)
+                .expectedRecordKey(recordId)
+                .readTimeout(readTimeout)
+                .build();
+
+        try {
+            ExampleConsumer consumer = new ExampleConsumer(consumerCtx);
+            return consumer.call();
+        } catch (Exception e) {
+            log.error("Validation failed", e);
+            return false;
+        }
+    }
+}
+```
+
+---
+
+## Phase 4: Configuration and Service Registration
+
+### Step 4.1, Create reference.conf
+
+Create `src/main/resources/reference.conf`:
+
+```hocon
+ktestify.plugins.example {
+  # Example Transport endpoint (required)
+  # Can be overridden via KTESTIFY_EXAMPLE_ENDPOINT
+  endpoint = ""
+  endpoint = ${?KTESTIFY_EXAMPLE_ENDPOINT}
+
+  # API key for authentication
+  api-key = ""
+  api-key = ${?KTESTIFY_EXAMPLE_API_KEY}
+
+  # Record read timeout (how long to wait for a record to appear)
+  read-timeout = 30s
+  read-timeout = ${?KTESTIFY_EXAMPLE_READ_TIMEOUT}
+}
+```
+
+### Step 4.2, RegisterServiceProvider
+
+Create the SPI descriptor at `src/main/resources/META-INF/services/io.github.ktestify.plugin.KtestifyPlugin`:
+
+```
+io.github.ktestify.example.ExamplePlugin
+```
+
+This single line tells Java's `ServiceLoader` to auto-discover your plugin.
+
+---
+
+## Phase 5: Complete Example Scenario
+
+Create `src/test/resources/features/example.feature`:
+
+```gherkin
+Feature: Example transport integration
+
+  Background:
+    Given namespace
+      | namespace    |
+      | test-org     |
+    Given Example source
+      | sourceName | sourceAlias | readTimeout |
+      | source-1   | main        | 30          |
+
+  Scenario: Send and validate a record
+    When record is sent to Example
+      | sourceAlias | recordId  | payload                  |
+      | main        | REC-001   | {"order_id": "ORD-1001"} |
+    Then expected record from Example
+      | sourceAlias | recordId | file            | readTimeout |
+      | main        | REC-001  | expected.json   | 30          |
+```
+
+---
+
+## Phase 6: Building and Testing
+
+### Compile the plugin:
+
+```bash
+mvn clean compile
+```
+
+### Run unit tests:
+
+```bash
+mvn test
+```
+
+### Build the JAR:
+
+```bash
+mvn package
+```
+
+This produces `target/ktestify-plugin-example-1.0-SNAPSHOT.jar`.
+
+### Use in ktestify-cucumber
+
+**Option A: As a Maven dependency**
+
+```xml
+<dependency>
+    <groupId>io.github.ktestify</groupId>
+    <artifactId>ktestify-plugin-example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <scope>test</scope>
+</dependency>
+```
+
+**Option B: Drop the JAR into `/workspace/plugins`**
+
+```bash
+docker run --rm \
+  -v $(pwd)/features:/workspace/features \
+  -v $(pwd)/plugins:/workspace/plugins \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  /workspace/features
+```
+
+---
+
+## Checklist for Production Quality
+
+Before publishing your plugin, ensure it meets these criteria:
+
+- [x] Plugin implements all methods of `KtestifyPlugin` interface
+- [x] Configuration is loaded from `ktestify.plugins.<id>` HOCON subtree
+- [x] `initialize()` validates required config and throws `PluginException` on failure
+- [x] `shutdown()` releases all resources (connections, threads, etc.)
+- [x] Plugin is registered in `META-INF/services/io.github.ktestify.plugin.KtestifyPlugin`
+- [x] Step definitions are in a discoverable package (returned by `getGluePackage()`)
+- [x] `RecordFetcher<V>` implementation returns `ConsumedRecord<V>` correctly
+- [x] `reference.conf` documents all configuration keys with sensible defaults
+- [x] Logging uses SLF4J via `@Slf4j` annotation
+- [x] Documentation includes configuration examples and usage scenarios
+- [x] README contains a clear description of what the plugin does
+- [x] Unit and integration tests pass
+- [x] Code is formatted with Maven Spotless
+- [x] Dependency versions are managed in POM parent or BOM
+
+---
+
+## Common Patterns
+
+### Accessing Plugin from Steps
+
+```java
+@Given("some step")
+public void someStep() {
+    ExamplePlugin plugin = (ExamplePlugin) PluginRegistry.load(null)
+        .getPlugins()
+        .stream()
+        .filter(p -> p.getId().equals("example"))
+        .findFirst()
+        .orElseThrow();
+
+    plugin.getClient().doSomething();
+}
+```
+
+### Reading Complex Config
+
+```java
+@Override
+public void initialize(PluginContext context) {
+    Config cfg = context.getConfig().getRaw();
+
+    if (cfg.hasPath("ktestify.plugins.example.advanced")) {
+        Config advCfg = cfg.getConfig("ktestify.plugins.example.advanced");
+        // Navigate nested HOCON structure
+    }
+}
+```
+
+### Three-Layer Pattern for Plugins
+
+```
+Plugin --(provides)--> Transport (RecordFetcher)
+Transport --(returns)--> ConsumedRecord<V>
+Orchestration (Consumer) --(uses)--> RecordMatcher
+```
+
+---
+
+## Resources
+
+- [ktestify-plugin-skeleton](https://github.com/ktestify/ktestify-plugin-skeleton), template repo
+- [ktestify-plugin-azureblob](https://github.com/ktestify/ktestify-plugin-azureblob), full reference implementation
+- [Plugin System Documentation](plugin-system), system overview
+- [ktestify-core API](https://github.com/ktestify/ktestify-core), base classes and interfaces
+
+---
+
+## Next Steps
+
+Once your plugin is complete and tested,
+
+1. **Publish to Maven Central**, follow [Sonatype's guide](https://central.sonatype.org/publishing/publish-maven/)
+2. **Create a GitHub repository**, use `ktestify-plugin-*` naming convention
+3. **Document on docs.ktestify.xyz**, add a page next to the Azure Blob example
+4. **Announce in the ktestify community**, open a discussion thread
+
+Happy plugin building!
+

@@ -1,18 +1,18 @@
 ---
 sidebar_position: 3
 title: CI Environment
-description: Why KTestify needs a dedicated test environment — a production mirror — and how to schedule it as a daily regression gate.
+description: Why KTestify needs a dedicated test environment, a production mirror, and how to schedule it as a daily regression gate.
 ---
 
-# CI Environment — Test Against a Production Mirror
+# CI Environment : Test Against a Production Mirror
 
 ## The purpose of KTestify
 
 KTestify exists to **catch regressions** in your event-driven system before they reach production.
 
-The idea is straightforward: you maintain a dedicated environment that mirrors production as closely as possible — the same Kafka topics, the same Schema Registry subjects, the same microservices or monolith — but with the **latest version of your code** deployed to it. KTestify runs against that environment, produces messages to input topics, and asserts that output topics contain the expected results.
+The idea is straightforward: you maintain a dedicated environment that mirrors production as closely as possible, the same Kafka topics, the same Schema Registry subjects, the same microservices or monolith, but with the **latest version of your code** deployed to it. KTestify runs against that environment, produces messages to input topics, and asserts that output topics contain the expected results.
 
-If a change breaks the contract between two services — a renamed field, a schema evolution, a missed edge case — KTestify catches it here, not in production.
+If a change breaks the contract between two services, a renamed field, a schema evolution, a missed edge case, KTestify catches it here, not in production.
 
 > **Run it on a daily schedule.** The most effective way to use KTestify is as a recurring regression gate: every night, deploy your latest code to the test environment and run the full suite. Wake up to a green build or a clear failure report.
 
@@ -48,8 +48,8 @@ flowchart TB
 ```
 
 Key properties of this environment:
-- **Same topology as production** — same topic names, same number of partitions, same schema subjects.
-- **Latest code** — your application is deployed here first, before any release to production.
+- **Same topology as production** : same topic names, same number of partitions, same schema subjects.
+- **Latest code** : your application is deployed here first, before any release to production.
 - **KTestify is the only external consumer** on output topics.
 - **No other team, no other application** writes to the same topics during the test run.
 
@@ -58,7 +58,7 @@ Key properties of this environment:
 ## Why isolation is non-negotiable
 
 ### Message ownership
-KTestify's deduplication registry prevents two steps within the same run from claiming the same record. It has **no protection against external producers**. If another application is concurrently writing to `orders-out`, KTestify may pick up that external record and pass it through your assertion — producing a false positive or a confusing failure.
+KTestify's deduplication registry prevents two steps within the same run from claiming the same record. It has **no protection against external producers**. If another application is concurrently writing to `orders-out`, KTestify may pick up that external record and pass it through your assertion, producing a false positive or a confusing failure.
 
 ### Offset drift
 KTestify seeks to `now − consumerDeltaTime` before consuming. If another application has been producing to the topic for hours, those records fall inside the delta window. Your test may pick up a stale record that accidentally matches your expected file.
@@ -78,7 +78,7 @@ The recommended pattern is a **nightly scheduled pipeline** that:
 ```
 00:00  ──► Clean test environment (topics, statestores)
 00:05  ──► Run KTestify suite
-09:00  ──► ✅ Green — ready to release   OR   ❌ Red — regression found, notify team
+09:00  ──► ✅ Green : ready to release OR ❌ Red : regression found, notify team
 ```
 
 This gives you a **daily regression gate**: any breaking change merged yesterday is caught overnight, before it reaches production.
@@ -167,7 +167,7 @@ Your application-under-test must be configured with the **same namespace** durin
 
 Before starting a run, ensure:
 
-- [ ] The test Kafka cluster is **dedicated** — no other team shares it
+- [ ] The test Kafka cluster is **dedicated**, no other team shares it
 - [ ] Your application is **deployed and healthy** in the test environment
 - [ ] All required topics are **pre-created**
 - [ ] Avro schema subjects are **registered** before any Avro tests run
@@ -177,6 +177,6 @@ Before starting a run, ensure:
 
 ## See also
 
-- [Installation →](installation) — pulling the Docker image and CI pipeline examples
-- [Configuration →](../write-tests/configuration) — `topic-namespace` and all environment variable overrides
-- [Timeout tuning →](../write-tests/advanced/timeout-tuning) — adjust timeouts for slower environments
+- [Installation →](installation), pulling the Docker image and CI pipeline examples
+- [Configuration →](../write-tests/configuration), `topic-namespace` and all environment variable overrides
+- [Timeout tuning →](../write-tests/advanced/timeout-tuning), adjust timeouts for slower environments

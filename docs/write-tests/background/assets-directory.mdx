@@ -4,7 +4,7 @@ title: Assets Directory
 description: Declare the base directory from which KTestify resolves all payload and expected files.
 ---
 
-# Assets Directory — `Given assets directory`
+# Assets Directory : `Given assets directory`
 
 The **assets directory** is the base path from which all file references in DataTable columns are resolved. Declare it once in the Background and all `When` / `Then` file paths become relative to it.
 
@@ -48,7 +48,7 @@ docker run --rm \
   ...
 ```
 
-So inside the container, your assets folder is at `/workspace/features/order-from-partner/assets` — that is exactly the path you declare in your Background:
+So inside the container, your assets folder is at `/workspace/features/order-from-partner/assets`, that is exactly the path you declare in your Background:
 
 ```gherkin
 Background:
@@ -58,7 +58,7 @@ Background:
 ```
 
 :::tip[One assets folder per feature]
-Keeping assets next to their feature file makes each test self-contained. You always know exactly which files belong to which scenario — no shared global assets folder to maintain.
+Keeping assets next to their feature file makes each test self-contained. You always know exactly which files belong to which scenario, no shared global assets folder to maintain.
 :::
 
 ---

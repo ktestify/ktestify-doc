@@ -10,7 +10,7 @@ Complete catalogue of every KTestify step. All DataTable columns are listed with
 
 ---
 
-## Background — `Given` steps
+## Background : `Given` steps
 
 ### `Given namespace`
 
@@ -191,11 +191,11 @@ Fails if exit code ≠ 0.
 
 ---
 
-## Assertions — `Then` / `And` steps
+## Assertions : `Then` / `And` steps
 
 ### `Then expected record from file`
 
-Raw file match — full value equality.
+Raw file match, full value equality.
 
 ```gherkin
 Then expected record from file
@@ -313,7 +313,7 @@ Then expected record based on schema should have fields matching from given valu
 
 ### `Then expected records from files`
 
-Raw batch — collect N records and match positionally against N files.
+Raw batch, collect N records and match positionally against N files.
 
 ```gherkin
 Then expected records from files
@@ -333,7 +333,7 @@ Then expected records from files
 
 ### `Then expected records from files based on schema`
 
-Avro batch — collect N Avro records and match positionally.
+Avro batch, collect N Avro records and match positionally.
 
 ```gherkin
 Then expected records from files based on schema
@@ -354,7 +354,7 @@ Then expected records from files based on schema
 
 ### `And record should appear in topic`
 
-Positive watcher — asserts at least one record is present.
+Positive watcher, asserts at least one record is present.
 
 ```gherkin
 And record should appear in topic
@@ -373,7 +373,7 @@ And record should appear in topic
 
 ### `And record should not appear in topic`
 
-Negative watcher — asserts no record appears within the timeout.
+Negative watcher, asserts no record appears within the timeout.
 
 ```gherkin
 And record should not appear in topic

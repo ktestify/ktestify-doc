@@ -15,9 +15,9 @@ KTestify supports a **batch consumer mode** where a single assertion step collec
 When `expectedRecordsCount > 1` in a batch step, `KafkaRecordFetcher` switches to batch mode:
 
 1. Polls continuously until `batchSize` (= `expectedRecordsCount`) records have been collected.
-2. Applies deduplication — no two steps in the same scenario can match the same physical record (topic + partition + offset).
+2. Applies deduplication, no two steps in the same scenario can match the same physical record (topic + partition + offset).
 3. If the timeout expires before enough records are collected, fails with:
-   > `Timed out after Nms waiting for 4 record(s) — only 2 collected.`
+   > `Timed out after Nms waiting for 4 record(s), only 2 collected.`
 
 ---
 
@@ -55,7 +55,7 @@ The deduplication registry (`KafkaRecordFetcher.MATCHED_RECORDS`) is a static `C
 
 This means:
 - One step cannot accidentally consume a record that was already matched by a previous step in the **same scenario**.
-- Records from a **previous scenario** are always cleared — no bleed-through.
+- Records from a **previous scenario** are always cleared, no bleed-through.
 
 ---
 

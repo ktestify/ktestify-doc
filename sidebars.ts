@@ -101,9 +101,11 @@ const sidebars: SidebarsConfig = {
         {
           type: 'category',
           label: 'Plugins',
-          link: {type: 'generated-index', description: 'The KTestify plugin system and available plugins.'},
+          link: {type: 'doc', id: 'extend/plugins/index'},
           items: [
+            'extend/plugins/index',
             'extend/plugins/plugin-system',
+            'extend/plugins/create-plugin',
             'extend/plugins/azureblob',
           ],
         },

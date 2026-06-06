@@ -1,7 +1,7 @@
 ---
 sidebar_position: 4
 title: Batch Assertions
-description: Assert multiple Kafka records in a single step — raw and Avro batch matchers.
+description: Assert multiple Kafka records in a single step, raw and Avro batch matchers.
 ---
 
 # Batch Assertions
@@ -10,12 +10,12 @@ Batch steps consume multiple records from an output topic in a single step and m
 
 ---
 
-## Raw batch — `Then expected records from files`
+## Raw batch : `Then expected records from files`
 
 ```gherkin
 Then expected records from files
-  | topicAlias | expectedRecordsCount | files                         | consumerReadTimeout |
-  | orders-out | 3                    | exp-1.json,exp-2.json,exp-3.json | 60               |
+  | topicAlias | expectedRecordsCount | files                            | consumerReadTimeout |
+  | orders-out | 3                    | exp-1.json,exp-2.json,exp-3.json | 60                  |
 ```
 
 | Column | Type | Required | Description |
@@ -28,7 +28,7 @@ Then expected records from files
 
 ---
 
-## Avro batch — `Then expected records from files based on schema`
+## Avro batch : `Then expected records from files based on schema`
 
 ```gherkin
 Then expected records from files based on schema
@@ -50,7 +50,7 @@ Then expected records from files based on schema
 ## Timeout behaviour
 
 - If the consumer collects **fewer than `expectedRecordsCount`** records before the timeout, the step fails with:
-  > `Timed out after Nms waiting for 4 record(s) — only 2 collected.`
+  > `Timed out after Nms waiting for 4 record(s), only 2 collected.`
 - Increase `consumerReadTimeout` if your pipeline produces output slowly.
 
 ---

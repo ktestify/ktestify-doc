@@ -4,7 +4,7 @@ title: Send Raw Record
 description: Produce a raw (String/JSON/text/XML) message to a Kafka input topic from a file.
 ---
 
-# Send Raw Record — `When record from file is sent`
+# Send Raw Record : `When record from file is sent`
 
 Produces a raw (String-serialised) message to a Kafka **input** topic. The file content is read as-is, with [dynamic variables](../dynamic-variables) resolved before sending.
 
@@ -29,7 +29,7 @@ When record from file is sent
 
 ## File format
 
-The file can contain any text content — JSON, XML, plain text, CSV. KTestify sends it verbatim as the record value (String serialisation). Dynamic variables (e.g. `{{DATE:yyyy-MM-dd}}`) are resolved before sending.
+The file can contain any text content, JSON, XML, plain text, CSV. KTestify sends it verbatim as the record value (String serialisation). Dynamic variables (e.g. `{{DATE:yyyy-MM-dd}}`) are resolved before sending.
 
 ```json title="assets/order.json"
 {

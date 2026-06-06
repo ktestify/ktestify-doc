@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # Installation
 
-KTestify ships as a **Docker image**. There is nothing to compile or install — pull the image and point it at your features.
+KTestify ships as a **Docker image**. There is nothing to compile or install, pull the image and point it at your features.
 
 ```bash
 docker pull ghcr.io/ktestify/ktestify-cucumber:latest
@@ -21,15 +21,15 @@ The image supports `linux/amd64` and `linux/arm64`.
 
 ## What you need
 
-- A **dedicated Kafka cluster** for testing — not shared, not production. [Why this matters →](ci-environment)
-- A **Git repository** that holds your `.feature` files and asset payloads — this is your test project (see layout below). Your CI pipeline checks it out and mounts it into the container.
+- A **dedicated Kafka cluster** for testing, not shared, not production. [Why this matters →](ci-environment)
+- A **Git repository** that holds your `.feature` files and asset payloads, this is your test project (see layout below). Your CI pipeline checks it out and mounts it into the container.
 - Optionally, a Confluent Schema Registry if you use Avro topics.
 
 ---
 
 ## Project layout
 
-Your features and assets live in a **dedicated Git repository** — your test project. Keep it separate from your application code so it can evolve independently and be checked out by any CI agent.
+Your features and assets live in a **dedicated Git repository**, your test project. Keep it separate from your application code so it can evolve independently and be checked out by any CI agent.
 
 The recommended structure inside that repository:
 
@@ -44,7 +44,7 @@ my-ktestify-tests/                  ← your Git repository root
                 └── order-enriched.json
 ```
 
-> Co-locating assets with their feature makes each test self-contained — everything a scenario needs is in one place.
+> Co-locating assets with their feature makes each test self-contained, everything a scenario needs is in one place.
 
 Your CI pipeline checks out this repository and mounts `workspace/` into the container at `/workspace`.
 
@@ -71,7 +71,7 @@ ktestify {
 }
 ```
 
-All values can be overridden by environment variables — see [Configuration →](../write-tests/configuration).
+All values can be overridden by environment variables, see [Configuration →](../write-tests/configuration).
 
 ---
 
@@ -80,7 +80,7 @@ All values can be overridden by environment variables — see [Configuration →
 <Tabs>
   <TabItem value="envvars" label="Environment variables">
 
-Minimal run — pass Kafka coordinates as env vars:
+Minimal run, pass Kafka coordinates as env vars:
 
 ```bash
 docker run --rm \
@@ -125,7 +125,7 @@ docker run --rm \
   </TabItem>
 </Tabs>
 
-The container exits with code `0` (all scenarios passed) or non-zero (failures) — suitable for use directly as a CI step.
+The container exits with code `0` (all scenarios passed) or non-zero (failures), suitable for use directly as a CI step.
 
 ---
 
@@ -210,6 +210,6 @@ jobs:
 
 ## Next steps
 
-- 🚀 [Quick start →](quick-start) — write your first feature file
-- ⚠️ [CI environment →](ci-environment) — why a dedicated test environment is non-negotiable
-- ⚙️ [Configuration →](../write-tests/configuration) — all HOCON keys and environment variable overrides
+-  [Quick start →](quick-start), write your first feature file
+- ⚠️ [CI environment →](ci-environment), why a dedicated test environment is non-negotiable
+- ⚙️ [Configuration →](../write-tests/configuration), all HOCON keys and environment variable overrides

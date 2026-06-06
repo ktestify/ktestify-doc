@@ -1,14 +1,14 @@
 ---
 sidebar_position: 1
 title: Introduction
-description: KTestify — modular, open-source Kafka Streams integration testing framework with a Gherkin DSL.
+description: KTestify, modular, open-source Kafka Streams integration testing framework with a Gherkin DSL.
 ---
 
 # What is KTestify?
 
 **KTestify** is a modular, open-source framework for integration-testing Kafka/Kafka Streams data pipelines.
 
-At its core sits a transport-agnostic engine that separates concerns cleanly into three layers — **Transport**, **Orchestration**, and **Assertion**.
+At its core sits a transport-agnostic engine that separates concerns cleanly into three layers, **Transport**, **Orchestration**, and **Assertion**.
 
 Today, a **Cucumber/Gherkin adapter** (`ktestify-cucumber`) lets teams write plain-English test scenarios that produce messages, consume from output topics, and assert record content without touching a single line of Kafka client code. Other tests engines such as Playwright or RobotFramework are planned in the future.
 
@@ -56,16 +56,16 @@ KTestify's documentation is split into two reader tracks:
 
 | Module | Role |
 |---|---|
-| [`ktestify-core`](https://github.com/ktestify/ktestify-core) | Transport-agnostic library — Kafka clients, matchers, config, models |
-| [`ktestify-cucumber`](https://github.com/ktestify/ktestify-cucumber) | Standalone Cucumber/Gherkin application — step definitions, hooks, services |
+| [`ktestify-core`](https://github.com/ktestify/ktestify-core) | Transport-agnostic library, Kafka clients, matchers, config, models |
+| [`ktestify-cucumber`](https://github.com/ktestify/ktestify-cucumber) | Standalone Cucumber/Gherkin application, step definitions, hooks, services |
 | [`ktestify-plugin-azureblob`](https://github.com/ktestify/ktestify-plugin-azureblob) | Azure Blob Storage plugin _(in progress)_ |
 
 ---
 
 ## Quick links
 
-- 🚀 **[Install & run](getting-started/installation)** — Docker image or standalone JAR
-- ⚠️ **[CI environment requirements](getting-started/ci-environment)** — dedicated Kafka stack is mandatory
+- 🚀 **[Install & run](getting-started/installation)**, Docker image or standalone JAR
+- ⚠️ **[CI environment requirements](getting-started/ci-environment)**, dedicated Kafka stack is mandatory
 - 📖 **[Full step reference](write-tests/step-reference)**
 - 🔧 **[Architecture deep-dive](extend/architecture)**
 - 📋 **[CHANGELOG](https://github.com/ktestify/ktestify-core/blob/main/CHANGELOG.md)**

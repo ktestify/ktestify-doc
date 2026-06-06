@@ -10,7 +10,7 @@ Raw matchers compare String-serialised Kafka record values against an expected f
 
 ---
 
-## File match — `Then expected record from file`
+## File match : `Then expected record from file`
 
 Fetches the next record from the output topic and asserts its value matches the content of an expected file character-for-character (with coloured diff on failure).
 
@@ -30,7 +30,7 @@ Then expected record from file
 
 ---
 
-## Key + value match — `Then expected record with key and value from file`
+## Key + value match : `Then expected record with key and value from file`
 
 Asserts both the record **key** and **value** match the content of an expected file.
 
@@ -44,7 +44,7 @@ The expected file must contain the key on the first line and the value starting 
 
 ---
 
-## Positional fields — `Then expected record should have fields matching from file`
+## Positional fields : `Then expected record should have fields matching from file`
 
 Asserts a specific character range within a specific line of the record value.
 
@@ -64,7 +64,7 @@ Then expected record should have fields matching from file
 
 ---
 
-## Record key match — `Then expected record should match key`
+## Record key match : `Then expected record should match key`
 
 Asserts only the **record key** (value is ignored).
 

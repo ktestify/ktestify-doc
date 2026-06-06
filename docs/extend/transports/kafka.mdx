@@ -1,10 +1,10 @@
 ---
 sidebar_position: 1
 title: Kafka Transport
-description: How KafkaRecordFetcher works — subscribe, seek, poll, deduplication, and both fetch modes.
+description: How KafkaRecordFetcher works, subscribe, seek, poll, deduplication, and both fetch modes.
 ---
 
-# Kafka Transport — `KafkaRecordFetcher`
+# Kafka Transport, `KafkaRecordFetcher`
 
 `KafkaRecordFetcher<K, V>` is the only class in ktestify-core that knows about Kafka internals. It implements `RecordFetcher<V>` and is the sole implementation of the transport contract today.
 
@@ -20,8 +20,8 @@ KafkaRecordFetcher.fetch()
 │
 ├─ ② calculateDeltaTime()
 │    Priority (ms):
-│      1. context.consumerDeltaTime  (from DataTable — already converted to ms)
-│      2. properties["consumerDeltaTime"]  (seconds — converted here)
+│      1. context.consumerDeltaTime  (from DataTable, already converted to ms)
+│      2. properties["consumerDeltaTime"]  (seconds, converted here)
 │      3. ktestify.framework.timeouts.consumer-delta-time  (HOCON duration)
 │
 ├─ ③ seekToOffset(T₀ = now - deltaTime)
@@ -43,7 +43,7 @@ KafkaRecordFetcher.fetch()
 ## Deduplication registry
 
 ```java
-// Static — shared across all KafkaRecordFetcher instances in the JVM
+// Static, shared across all KafkaRecordFetcher instances in the JVM
 private static final Set<MatchedRecord> MATCHED_RECORDS =
     ConcurrentHashMap.newKeySet();
 
@@ -87,7 +87,7 @@ Properties are derived from `KtestifyConfig` and merged with any per-context ove
 | Situation | Exception thrown |
 |---|---|
 | Timeout with 0 records | `FetchException("Timed out after Nms waiting for a record on topic '...'")` |
-| Timeout with partial batch | `FetchException("Timed out after Nms waiting for N record(s) — only M collected.")` |
+| Timeout with partial batch | `FetchException("Timed out after Nms waiting for N record(s), only M collected.")` |
 | `WakeupException` during poll | `FetchException` (logged, consumer closed cleanly) |
 | Broker unreachable | `FetchException` wrapping the Kafka exception |
 
@@ -97,7 +97,7 @@ All `FetchException`s are caught by `AbstractKafkaConsumer` and re-thrown as `Co
 
 ## See also
 
-- [Adding a transport →](adding-a-transport) — how to replace Kafka with a different broker
-- [Architecture →](../architecture) — three-layer overview
-- [Timeout tuning →](../../write-tests/advanced/timeout-tuning) — controlling timeouts from feature files
+- [Adding a transport →](adding-a-transport), how to replace Kafka with a different broker
+- [Architecture →](../architecture), three-layer overview
+- [Timeout tuning →](../../write-tests/advanced/timeout-tuning), controlling timeouts from feature files
 

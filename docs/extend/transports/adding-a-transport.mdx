@@ -1,12 +1,12 @@
 ---
 sidebar_position: 2
 title: Adding a Transport
-description: New transports (IBM MQ, RabbitMQ, …) are built as KTestify plugins — a separate Maven module that plugs in at runtime.
+description: New transports (IBM MQ, RabbitMQ, …) are built as KTestify plugins, a separate Maven module that plugs in at runtime.
 ---
 
 # Adding a New Transport
 
-New transports in KTestify are **plugins** — self-contained Maven modules that hook into the framework at runtime without touching any existing code. This is the same model used by `ktestify-plugin-azureblob`.
+New transports in KTestify are **plugins**, self-contained Maven modules that hook into the framework at runtime without touching any existing code. This is the same model used by `ktestify-plugin-azureblob`.
 
 Before reading this page, make sure you understand the [Plugin System →](../plugins/plugin-system).
 
@@ -14,13 +14,13 @@ Before reading this page, make sure you understand the [Plugin System →](../pl
 
 ## Why the plugin model
 
-KTestify's transport layer is fully abstracted behind `RecordFetcher<V>` and `ConsumedRecord<V>`. All existing matchers (`FileRecordMatcher`, `XmlRecordMatcher`, `AvroFileRecordMatcher`, …) work on `List<ConsumedRecord<V>>` regardless of where those records came from. A new transport only needs to produce `ConsumedRecord` objects — everything else is already done.
+KTestify's transport layer is fully abstracted behind `RecordFetcher<V>` and `ConsumedRecord<V>`. All existing matchers (`FileRecordMatcher`, `XmlRecordMatcher`, `AvroFileRecordMatcher`, …) work on `List<ConsumedRecord<V>>` regardless of where those records came from. A new transport only needs to produce `ConsumedRecord` objects, everything else is already done.
 
-The plugin system lets you ship that new transport as a separate JAR dropped into `/workspace/plugins` at runtime — no rebuild of `ktestify-core` or `ktestify-cucumber` required.
+The plugin system lets you ship that new transport as a separate JAR dropped into `/workspace/plugins` at runtime, no rebuild of `ktestify-core` or `ktestify-cucumber` required.
 
 ---
 
-## Step 1 — Create a Maven module
+## Step 1 - Create a Maven module
 
 ```
 ktestify-plugin-ibmmq/
@@ -45,7 +45,7 @@ Your `pom.xml` declares `ktestify-core` as its only KTestify dependency:
 
 ---
 
-## Step 2 — Implement `RecordFetcher<V>`
+## Step 2 - Implement `RecordFetcher<V>`
 
 This is the transport contract. Wrap each incoming message as a `ConsumedRecord<V>` and throw `FetchException` on timeout or broker error:
 
@@ -82,7 +82,7 @@ public class IbmMqRecordFetcher<V> implements RecordFetcher<V> {
 
 ---
 
-## Step 3 — Implement `KtestifyPlugin`
+## Step 3 - Implement `KtestifyPlugin`
 
 Register your fetcher and any Cucumber step definitions through the plugin interface:
 
@@ -114,7 +114,7 @@ public void registerPlugin() {
 
 ---
 
-## Step 4 — Add Gherkin steps
+## Step 4 - Add Gherkin steps
 
 Create step definitions that retrieve your plugin from `PluginRegistry` and expose the Gherkin DSL:
 
@@ -146,7 +146,7 @@ Then expected queue record from file
 
 ---
 
-## Step 5 — Plugin configuration
+## Step 5 - Plugin configuration
 
 By convention, read your settings from under the `ktestify` namespace:
 
@@ -163,7 +163,7 @@ ktestify {
 
 ---
 
-## Step 6 — Drop the JAR into `/workspace/plugins`
+## Step 6 - Drop the JAR into `/workspace/plugins`
 
 Build your plugin JAR and mount it into the container. KTestify scans `/workspace/plugins` at startup and loads any JARs it finds:
 
@@ -182,6 +182,6 @@ No rebuild of `ktestify-cucumber` required. The plugin is discovered and its ste
 
 ## See also
 
-- [Plugin System →](../plugins/plugin-system) — `KtestifyPlugin`, `PluginRegistry`, `PluginContext`
-- [Azure Blob plugin →](../plugins/azureblob) — a real example of the plugin pattern
-- [Architecture →](../architecture) — how `RecordFetcher<V>` and `ConsumedRecord<V>` keep transports isolated
+- [Plugin System →](../plugins/plugin-system), `KtestifyPlugin`, `PluginRegistry`, `PluginContext`
+- [Azure Blob plugin →](../plugins/azureblob), a real example of the plugin pattern
+- [Architecture →](../architecture), how `RecordFetcher<V>` and `ConsumedRecord<V>` keep transports isolated

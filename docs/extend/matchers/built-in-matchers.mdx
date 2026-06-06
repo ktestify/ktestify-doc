@@ -51,7 +51,7 @@ Asserts both the record **key** and **value**. The expected file must contain th
 
 ### `KeyRecordMatcher`
 
-Asserts only the record **key** — the value is not evaluated.
+Asserts only the record **key**, the value is not evaluated.
 
 - **MatchContext fields used:** `matchKey` (falls back to `matchFilePaths.get(0)` if blank)
 
@@ -85,7 +85,7 @@ Runs one or more XPath expressions against the record value and compares each ex
 
 ### `NoOpRecordMatcher<V>`
 
-Always returns `MatchResult.pass()`. Used when `matchMethod` is `null` or blank — typically for watcher steps that only care about record presence, not content.
+Always returns `MatchResult.pass()`. Used when `matchMethod` is `null` or blank, typically for watcher steps that only care about record presence, not content.
 
 ---
 
@@ -121,8 +121,8 @@ Avro equivalent of `FieldsRecordMatcher`. Extracts a character range from the JS
 
 ## Key design rules
 
-1. `excludedFields` defaults to `Collections.emptyList()` — matchers check `isEmpty()`, never `null`.
-2. `matchFilePaths` is always a `List<String>` — single-record matchers use `get(0)`, batch matchers iterate by index.
+1. `excludedFields` defaults to `Collections.emptyList()`, matchers check `isEmpty()`, never `null`.
+2. `matchFilePaths` is always a `List<String>`, single-record matchers use `get(0)`, batch matchers iterate by index.
 3. XML/XPath matchers throw `ConsumerException` when called via `RecordMatcherFactory.forAvro()`.
 4. `NoOpRecordMatcher` is the default when no match method is configured.
 

@@ -7,14 +7,14 @@ description: Write and run your first KTestify integration test.
 # Quick Start
 
 :::info[Prerequisites]
-You need a **dedicated Kafka environment** for testing — a broker (and optionally a Schema Registry) that is not shared with any other team or application. Read [CI environment →](ci-environment) if you haven't set one up yet.
+You need a **dedicated Kafka environment** for testing, a broker (and optionally a Schema Registry) that is not shared with any other team or application. Read [CI environment →](ci-environment) if you haven't set one up yet.
 :::
 
 ---
 
 ## 1. Create your test repository
 
-Your features and assets live in a **dedicated Git repository** — separate from your application code. This is your test project; your CI pipeline checks it out to run KTestify.
+Your features and assets live in a **dedicated Git repository**, separate from your application code. This is your test project; your CI pipeline checks it out to run KTestify.
 
 Inside that repository, each feature set gets its own folder with its assets right next to it:
 
@@ -113,7 +113,7 @@ KTestify will:
 
 ## Next steps
 
-- 📖 [Step reference →](../write-tests/step-reference) — every step and every DataTable column
-- ⚙️ [Configuration →](../write-tests/configuration) — HOCON keys and environment variable overrides
-- 🔄 [Dynamic variables →](../write-tests/dynamic-variables) — inject dates, UUIDs, env vars into payloads
-- ⚠️ [CI environment →](ci-environment) — scheduling daily regression tests
+-  [Step reference →](../write-tests/step-reference), every step and every DataTable column
+- ⚙️ [Configuration →](../write-tests/configuration), HOCON keys and environment variable overrides
+-  [Dynamic variables →](../write-tests/dynamic-variables), inject dates, UUIDs, env vars into payloads
+- ⚠️ [CI environment →](ci-environment), scheduling daily regression tests
