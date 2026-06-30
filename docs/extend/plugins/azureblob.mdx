@@ -40,17 +40,7 @@ Use the Azure Blob plugin when your system,
 
 ### With ktestify-cucumber (Docker)
 
-Drop the plugin JAR into `/workspace/plugins` and ktestify will auto-discover it via `ServiceLoader`,
-
-```bash
-docker run --rm \
-  -v $(pwd)/features:/workspace/features \
-  -v $(pwd)/assets:/workspace/assets \
-  -v $(pwd)/plugins:/workspace/plugins \
-  -e AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=..." \
-  ghcr.io/ktestify/ktestify-cucumber:latest \
-  /workspace/features
-```
+The Azure Blob plugin is considered a first-party plugin and is bundled in the `ktestify-cucumber` fat JAR. No additional installation is required.
 
 ---
 

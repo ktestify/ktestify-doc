@@ -44,6 +44,31 @@ Or set it as an environment variable:
 
 ---
 
+## Pointing to your features
+
+`ktestify-cucumber` decides which features to run from, in priority order:
+
+1. A path passed as a CLI argument (e.g. `... ghcr.io/ktestify/ktestify-cucumber:latest /workspace/features`)
+2. The `KTESTIFY_FEATURES_PATH` environment variable
+3. The built-in default
+
+| Environment variable | Default (Docker image) | Default (core) | Description |
+|---|---|---|---|
+| `KTESTIFY_FEATURES_PATH` | `/workspace/features` | `src/test/resources/features` | Directory (or file) scanned for `.feature` files when no path is passed as a CLI argument |
+
+```bash
+docker run --rm \
+  -v "$(pwd)/workspace/features:/workspace/features" \
+  -e KTESTIFY_FEATURES_PATH=/workspace/features \
+  ghcr.io/ktestify/ktestify-cucumber:latest
+```
+
+:::note
+`KTESTIFY_FEATURES_PATH` is a `ktestify-cucumber` runtime setting, not a HOCON key under `ktestify.*`. An explicit path passed on the command line always takes precedence over the environment variable.
+:::
+
+---
+
 ## Minimal config
 
 The only two keys you must set for a basic raw-JSON test run:
@@ -172,6 +197,16 @@ Then expected record from file
 | `ktestify.framework.execution.snapshot-mode` | `KTESTIFY_SNAPSHOT_MODE` | `false` | When `true`, updates expected files instead of asserting against them |
 | `ktestify.framework.execution.strict-matching` | — | `true` | Fail on any mismatch. Always `false` internally in KTestify's matchers — not user-configurable at this time. |
 | `ktestify.framework.execution.max-retries` | — | `3` | Maximum retries for transient failures |
+
+---
+
+### Reporting
+
+| HOCON key | Environment variable | Default | Description |
+|---|---|---|---|
+| `ktestify.framework.reporting.enabled` | — | `true` | Enable generation of the test report |
+| `ktestify.framework.reporting.format` | — | `html` | Report format: `html`, `json`, `cucumber` |
+| `ktestify.framework.reporting.output` | `KTESTIFY_OUTPUT_DIR` | `src/target/reports/report.html` | Output path for the generated report |
 
 ---
 
