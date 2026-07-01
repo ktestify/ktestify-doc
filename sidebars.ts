@@ -107,6 +107,7 @@ const sidebars: SidebarsConfig = {
             'extend/plugins/plugin-system',
             'extend/plugins/create-plugin',
             'extend/plugins/azureblob',
+            'extend/plugins/notifications'
           ],
         },
       ],

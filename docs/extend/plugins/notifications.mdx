@@ -1,0 +1,547 @@
+---
+sidebar_position: 4
+title: Notifications Plugin
+description: ktestify-plugin-notifications, send rich test suite summary cards to Microsoft Teams, Slack, or any HTTP webhook at the end of a run.
+---
+
+# Notifications Plugin
+
+`ktestify-plugin-notifications` is a first-party KTestify plugin that sends a rich test suite summary at the end of each run. It posts a colour-coded card to **Microsoft Teams**, **Slack**, or any **HTTP webhook**, with per-tag group breakdowns, CI/Git context, configurable success-rate thresholds, and fully user-overridable templates.
+
+:::caution[Work in progress]
+This plugin is actively being developed. The API surface, configuration keys, and template variables may evolve before the first stable release.
+:::
+
+---
+
+## When to Use
+
+Use the Notifications plugin when your team,
+
+- Wants a summary card in Teams or Slack as soon as a test run finishes
+- Needs per-domain breakdowns grouped by Cucumber tag (e.g. `@orders`, `@payments`)
+- Runs tests in CI and wants branch, commit, build number, and pipeline links auto-attached
+- Needs to drive alerting based on the suite success rate
+- Wants to deliver results to a custom endpoint via a generic webhook or a custom channel
+
+---
+
+## Installation
+
+### Maven Dependency
+
+```xml
+<dependency>
+    <groupId>io.github.ktestify</groupId>
+    <artifactId>ktestify-plugin-notifications</artifactId>
+    <version>0.1.1-SNAPSHOT</version>
+    <scope>test</scope>
+</dependency>
+```
+
+### With ktestify-cucumber (Docker)
+
+The Notification plugin is considered as a first-party plugin and is bundled in the `ktestify-cucumber` fat JAR. No extra steps are required to use it.
+
+---
+
+## Configuration
+
+The plugin reads settings from `ktestify.plugins.notifications` in your HOCON configuration file. Place your configuration in `application.conf` or override via environment variables.
+
+The plugin is **disabled by default**. Activate it by setting `enabled = true` and configuring at least one channel,
+
+```hocon
+ktestify.plugins.notifications {
+  enabled = true
+  enabled = ${?KTESTIFY_NOTIFICATIONS_ENABLED}
+
+  suite {
+    name        = "My Integration Tests"
+    environment = ${?KTESTIFY_ENV}        # e.g. "staging"
+    report-url  = ${?KTESTIFY_REPORT_URL} # link to Allure / GitLab Pages report
+  }
+
+  channels = [
+    {
+      type        = "teams"
+      enabled     = true
+      webhook-url = ${?KTESTIFY_TEAMS_WEBHOOK_URL}
+    }
+  ]
+}
+```
+
+### Configuration Priority
+
+1. System properties (e.g. `-Dktestify.plugins.notifications.enabled=true`)
+2. Environment variables (e.g. `KTESTIFY_NOTIFICATIONS_ENABLED`)
+3. `application.conf` in classpath
+4. Plugin's `reference.conf` (defaults)
+
+---
+
+## Configuration Reference
+
+### Top-level Keys
+
+| Key | Type | Default | Env var | Description |
+|---|---|---|---|---|
+| `enabled` | bool | `false` | `KTESTIFY_NOTIFICATIONS_ENABLED` | Master on/off switch |
+| `on-failure-only` | bool | `false` | `KTESTIFY_NOTIFICATIONS_ON_FAILURE_ONLY` | Global default; each channel can override |
+
+### `suite` Block
+
+| Key | Default | Env var | Description |
+|---|---|---|---|
+| `name` | `"ktestify Test Suite"` | `KTESTIFY_NOTIFICATIONS_SUITE_NAME` | Displayed in the notification header |
+| `environment` | `""` | `KTESTIFY_ENV` | Environment label (e.g. `"staging"`, `"prod"`) |
+| `report-url` | `""` | `KTESTIFY_REPORT_URL` | Link to the published HTML/Allure report |
+
+### `thresholds` Block
+
+The success rate drives the visual styling of the card.
+
+| Key | Default | Description |
+|---|---|---|
+| `good` | `75` | Success rate % at or above this value uses the `"good"` style (green) |
+| `warning` | `50` | Success rate % at or above this value uses the `"warning"` style (yellow); below uses `"attention"` (red) |
+
+### `groups` List
+
+Groups scenarios by Cucumber tag for a per-domain breakdown in the notification card.
+
+```hocon
+groups = [
+  { tag = "orders",    label = "Order Service",   emoji = "📦" },
+  { tag = "payments",  label = "Payment Service", emoji = "💳" },
+  { tag = "inventory", label = "Inventory",       emoji = "🏭" }
+]
+```
+
+Scenarios that match no configured tag are placed in an automatic **Untagged** group.
+
+### `channels` List
+
+Each entry configures one outbound channel. Common keys,
+
+| Key | Description |
+|---|---|
+| `type` | Channel type, `"teams"`, `"slack"`, `"webhook"`, or `"log"` |
+| `enabled` | Whether this channel fires |
+| `on-failure-only` | Only notify when the suite fails (overrides the global default) |
+| `webhook-url` | Incoming webhook URL (Teams / Slack) |
+| `url` | Endpoint URL (webhook type) |
+| `method` | HTTP method (webhook type, default `"POST"`) |
+| `headers` | HTTP headers map (webhook type) |
+| `template` | Template source, see [Templates](#templates) |
+
+---
+
+## Channels
+
+### Microsoft Teams
+
+```hocon
+{
+  type            = "teams"
+  enabled         = true
+  webhook-url     = ${?KTESTIFY_TEAMS_WEBHOOK_URL}
+  on-failure-only = false
+  template        = "builtin"
+}
+```
+
+The Adaptive Card renders a colour-coded header (green / yellow / red), a fact set with CI/Git metadata, a section per tag group, and action buttons linking to the report and pipeline.
+
+### Slack
+
+```hocon
+{
+  type            = "slack"
+  enabled         = true
+  webhook-url     = ${?KTESTIFY_SLACK_WEBHOOK_URL}
+  on-failure-only = true   # only notify on failures
+  template        = "builtin"
+}
+```
+
+The Block Kit message mirrors the Teams card, a header, a summary section, per-group blocks, and footer links.
+
+### Generic HTTP Webhook
+
+```hocon
+{
+  type    = "webhook"
+  enabled = true
+  url     = ${?KTESTIFY_WEBHOOK_URL}
+  method  = "POST"
+  headers {
+    Content-Type  = "application/json"
+    Authorization = "Bearer "${?KTESTIFY_WEBHOOK_TOKEN}
+  }
+  template = "builtin"
+}
+```
+
+### Log (debug / local dev)
+
+```hocon
+{
+  type    = "log"
+  enabled = true
+}
+```
+
+Zero external dependencies. Always available. Writes suite results and per-group breakdowns to the SLF4J logger at `INFO`.
+
+---
+
+## Templates
+
+The notification payload for each channel is driven by a three-slot template system,
+
+| Slot | Variable | Description |
+|---|---|---|
+| `suite` | outer card / message body | Rendered once per suite event |
+| `group` | per-group section | Rendered once per tag group, injected via `{{groupSections}}` |
+| `footer` | action buttons / links | Rendered once, injected via `{{footer}}` |
+
+### Resolution Order (highest to lowest priority)
+
+1. **Inline HOCON `"""..."""`** string in `template.suite` / `template.group` / `template.footer`
+2. **Classpath resource**, `template = "classpath:my-card.json"`
+3. **Filesystem path**, `template = "/opt/config/teams-card.json"`
+4. **Bundled default**, `template = "builtin"` (or omitted)
+
+### Inline Template Example
+
+```hocon
+{
+  type        = "teams"
+  enabled     = true
+  webhook-url = ${?KTESTIFY_TEAMS_WEBHOOK_URL}
+  template {
+    suite = """
+      {
+        "type": "AdaptiveCard",
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+        "version": "1.4",
+        "body": [
+          {
+            "type": "TextBlock",
+            "text": "🧪 **{{suiteName}}**, {{environment}}, {{date}}",
+            "weight": "Bolder",
+            "size": "Large"
+          },
+          {
+            "type": "FactSet",
+            "facts": [
+              {"title": "Branch",  "value": "{{gitBranch}}"},
+              {"title": "Passed",  "value": "{{passedCount}}/{{totalCount}}"},
+              {"title": "Success", "value": "{{successRate}}%"}
+            ]
+          },
+          {{groupSections}}{{footer}}
+        ]
+      }
+    """
+    group = """
+      {
+        "type": "Container",
+        "style": "{{style}}",
+        "items": [{"type": "TextBlock", "text": "{{emoji}} **{{groupLabel}}**, {{successRate}}%"}]
+      }
+    """
+    footer = """
+      {
+        "type": "ActionSet",
+        "actions": [
+          {"type": "Action.OpenUrl", "title": "📊 Report",   "url": "{{reportUrl}}"},
+          {"type": "Action.OpenUrl", "title": "🔗 Pipeline", "url": "{{pipelineUrl}}"}
+        ]
+      }
+    """
+  }
+}
+```
+
+### Template Variable Reference
+
+#### Suite-level variables
+
+| Variable | Example |
+|---|---|
+| `{{suiteName}}` | `"My Integration Tests"` |
+| `{{environment}}` | `"staging"` |
+| `{{date}}` | `"2026-06-06"` |
+| `{{status}}` | `"PASSED"` / `"FAILED"` |
+| `{{overallStyle}}` | `"good"` / `"warning"` / `"attention"` |
+| `{{totalCount}}` | `"42"` |
+| `{{passedCount}}` | `"38"` |
+| `{{failedCount}}` | `"4"` |
+| `{{skippedCount}}` | `"0"` |
+| `{{successRate}}` | `"90"` |
+| `{{reportUrl}}` | `"https://pages.gitlab.io/…"` |
+| `{{ciName}}` | `"GitHub Actions"` |
+| `{{pipelineUrl}}` | `"https://github.com/…/runs/123"` |
+| `{{buildNumber}}` | `"456"` |
+| `{{gitBranch}}` | `"main"` |
+| `{{gitRevision}}` | `"a1b2c3d"` |
+| `{{gitTag}}` | `"v1.4.0"` |
+| `{{groupSections}}` | *(rendered group fragments, comma-joined)* |
+| `{{footer}}` | *(rendered footer fragment)* |
+
+#### Group-level variables (`template.group` only)
+
+| Variable | Example |
+|---|---|
+| `{{groupLabel}}` | `"Order Service"` |
+| `{{emoji}}` | `"📦"` |
+| `{{tag}}` | `"orders"` |
+| `{{successRate}}` | `"67"` |
+| `{{style}}` | `"warning"` |
+| `{{passedCount}}` | `"8"` |
+| `{{failedCount}}` | `"4"` |
+| `{{totalCount}}` | `"12"` |
+
+---
+
+## Complete Configuration Example
+
+```hocon
+ktestify.plugins.notifications {
+  enabled = true
+
+  suite {
+    name        = "Order Pipeline Tests"
+    environment = "staging"
+    report-url  = ${?KTESTIFY_REPORT_URL}
+  }
+
+  thresholds {
+    good    = 80
+    warning = 60
+  }
+
+  groups = [
+    { tag = "orders",   label = "Order Service",   emoji = "📦" },
+    { tag = "payments", label = "Payment Service", emoji = "💳" }
+  ]
+
+  channels = [
+    {
+      type        = "teams"
+      enabled     = true
+      webhook-url = ${?KTESTIFY_TEAMS_WEBHOOK_URL}
+    },
+    {
+      type            = "slack"
+      enabled         = true
+      webhook-url     = ${?KTESTIFY_SLACK_WEBHOOK_URL}
+      on-failure-only = true
+    },
+    {
+      type    = "log"
+      enabled = true
+    }
+  ]
+}
+```
+
+---
+
+## CI/CD Auto-detection
+
+Branch, commit, build number, and pipeline link are automatically extracted from the running environment, no manual configuration required. The plugin detects GitLab CI, GitHub Actions, CircleCI, Jenkins, and others via `cucumber-cienvironment`, then exposes the values through the `{{ciName}}`, `{{pipelineUrl}}`, `{{buildNumber}}`, `{{gitBranch}}`, `{{gitRevision}}`, and `{{gitTag}}` template variables.
+
+When running outside a recognised CI system, these variables fall back to empty strings and the card still renders cleanly.
+
+---
+
+## Implementation Structure
+
+The plugin follows the layered architecture defined by ktestify-core,
+
+```
+ktestify-plugin-notifications/
+└── src/main/java/io/github/ktestify/notifications/
+    ├── NotificationsPlugin.java             ← KtestifyPlugin SPI impl
+    ├── config/
+    │   ├── NotificationsConfig.java         ← reads ktestify.plugins.notifications HOCON
+    │   ├── SuiteConfig.java                 ← suite block model
+    │   ├── ThresholdsConfig.java            ← success-rate thresholds
+    │   ├── TagGroupConfig.java              ← tag group definitions
+    │   └── ChannelConfig.java               ← per-channel settings
+    ├── hooks/
+    │   └── NotificationHooks.java           ← @Before / @After / @AfterAll glue
+    ├── model/
+    │   ├── ScenarioEvent.java               ← single scenario result
+    │   ├── SuiteEvent.java                  ← aggregated suite result
+    │   ├── GroupResult.java                 ← per-tag breakdown
+    │   ├── CiContext.java                   ← CI metadata
+    │   ├── GitContext.java                  ← Git metadata
+    │   └── NotificationStatus.java          ← PASSED / FAILED enum
+    ├── service/
+    │   ├── ScenarioAggregator.java          ← collects scenarios, builds SuiteEvent
+    │   ├── CiContextResolver.java           ← resolves CI/Git context
+    │   └── NotificationService.java         ← async dispatch + shutdown
+    ├── channel/
+    │   ├── NotificationChannel.java         ← channel SPI
+    │   ├── NotificationChannelFactory.java  ← builds channels from config
+    │   └── impl/
+    │       ├── LogNotificationChannel.java
+    │       ├── TeamsNotificationChannel.java
+    │       ├── SlackNotificationChannel.java
+    │       └── WebhookNotificationChannel.java
+    └── template/
+        ├── NotificationTemplateEngine.java   ← renders suite/group/footer
+        ├── NotificationTemplateResolver.java ← 4-level template lookup
+        └── BuiltinTemplates.java             ← bundled fallback templates
+```
+
+**Execution flow :**
+
+```
+NotificationHooks (@Before / @After / @AfterAll)
+       │
+       ├─ @Before  → records scenario start time
+       │
+       ├─ @After   → ScenarioEvent.from(scenario, durationMs)
+       │               └─ ScenarioAggregator.record(event)
+       │
+       └─ @AfterAll → CiContextResolver.resolve()
+                       ScenarioAggregator.buildSuiteEvent(config, ci, git)
+                           └─ tag grouping + success-rate + style computation
+                       NotificationService.dispatch(suiteEvent)
+                           └─ CompletableFuture.runAsync() per channel
+                       NotificationService.shutdown(30s)
+```
+
+**Key layers :**
+
+- **Aggregation**, `ScenarioAggregator` collects each scenario result and builds the final `SuiteEvent`
+- **Resolution**, `CiContextResolver` extracts CI and Git metadata for the card
+- **Dispatch**, `NotificationService` fans out the event to each channel asynchronously
+- **Rendering**, `NotificationTemplateEngine` resolves and fills templates per channel
+
+---
+
+## Custom Channels (SPI)
+
+Implement `NotificationChannel` and register it via the Java SPI,
+
+```java
+// com.example.MyPagerDutyChannel.java
+public class MyPagerDutyChannel implements NotificationChannel {
+    @Override public String getType() { return "pagerduty"; }
+
+    @Override
+    public void sendSuite(SuiteEvent event) {
+        // send a PagerDuty alert if event.getStatus() == FAILED
+    }
+}
+```
+
+```
+# META-INF/services/io.github.ktestify.notifications.channel.NotificationChannel
+com.example.MyPagerDutyChannel
+```
+
+Then reference it in your config,
+
+```hocon
+channels = [{ type = "pagerduty", enabled = true }]
+```
+
+Custom channels registered in `META-INF/services/…NotificationChannel` are discovered automatically alongside the built-in ones.
+
+---
+
+## Error Handling
+
+The plugin is designed to be failure-safe, a broken webhook must never fail a test run.
+
+### Channel Send Failure
+
+If a channel throws while sending, the exception is caught, logged at `WARN`, and swallowed,
+
+```
+WARN  io.github.ktestify.notifications.service.NotificationService -
+  Channel 'teams' failed to send suite notification: 404 Not Found
+```
+
+The remaining channels still fire, and the test result is unaffected.
+
+### No Channel Configured
+
+If `enabled = true` but the `channels` list is empty (or every channel is disabled), nothing is sent and a single diagnostic line is logged. Add at least one enabled channel to receive notifications.
+
+### Notifications Not Arriving
+
+Check that,
+
+- `enabled = true` is set (the plugin is off by default)
+- At least one channel has `enabled = true`
+- The `webhook-url` (or `url`) resolves to a non-empty value
+- `on-failure-only` is not suppressing a passing run
+
+---
+
+## Advanced Topics
+
+### Failure-only Notifications
+
+Set `on-failure-only = true` globally, or per channel, to only notify when the suite fails,
+
+```hocon
+ktestify.plugins.notifications {
+  enabled         = true
+  on-failure-only = true   # global default
+  channels = [
+    { type = "teams", enabled = true, webhook-url = ${?KTESTIFY_TEAMS_WEBHOOK_URL} },
+    { type = "log",   enabled = true, on-failure-only = false } # always log
+  ]
+}
+```
+
+### Threshold-driven Styling
+
+Tune `thresholds.good` and `thresholds.warning` to match your team's quality bar. The computed style (`good`, `warning`, `attention`) is exposed as `{{overallStyle}}` at the suite level and `{{style}}` per group, so custom templates can react to it.
+
+---
+
+## Key Design Rules
+
+- `sendSuite()` **must never throw**, exceptions are caught, logged at `WARN`, and swallowed
+- Notifications are **async**, test execution is never blocked by a slow webhook
+- The plugin has **zero overhead when disabled**, no channels are instantiated and no threads are started
+
+---
+
+## Troubleshooting
+
+| Issue | Solution |
+|---|---|
+| Plugin not discovered | Ensure the JAR is on the classpath or in `/workspace/plugins`, check logs for `ServiceLoader` errors |
+| No notification sent | Verify `enabled = true` and that at least one channel is enabled |
+| Webhook returns 404 / 401 | Verify the `webhook-url` / `url` and any auth headers, regenerate the incoming webhook if needed |
+| CI fields are empty | Confirm the run is inside a supported CI provider; locally these fields are blank by design |
+| Card looks wrong | Validate your inline template JSON, or fall back to `template = "builtin"` |
+
+---
+
+## Contributing
+
+The Notifications plugin is actively maintained. Report issues and contribute improvements at,
+
+[ktestify-plugin-notifications on GitHub](https://github.com/ktestify/ktestify-plugin-notifications)
+
+---
+
+## See Also
+
+- [Plugin System Overview](plugin-system), how plugins work
+- [Creating a Plugin](create-plugin), build your own plugin from scratch
+- [Azure Blob Storage Plugin](azureblob), another first-party plugin reference
+
