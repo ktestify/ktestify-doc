@@ -51,13 +51,13 @@ Deep dive into,
 
 Complete step-by-step guide covering,
 
-- Project setup from the skeleton template
-- POM configuration with essential dependencies
+- Project setup using the Maven archetype (`ktestify-plugin-archetype`)
+- Archetype parameters and project generation
 - Implementing `KtestifyPlugin` with proper initialization and shutdown
 - Building the transport layer (`RecordFetcher` implementation)
 - Writing Cucumber step definitions
 - Configuration and SPI registration
-- Complete working example (Example Plugin)
+- Testing with Testcontainers
 - Production checklist
 
 **Read this if**: You want to build your own plugin or learn by example.
@@ -118,18 +118,24 @@ Then expected blob from file
 
 ### Build Your Own Plugin
 
-Start with the skeleton template,
+Start with the Maven archetype — it generates a complete, compilable project in seconds:
 
 ```bash
-git clone https://github.com/ktestify/ktestify-plugin-skeleton.git \
-  my-plugin-project
-
-cd my-plugin-project
-# Edit MyPlugin.java and steps
-# mvn package
+mvn archetype:generate \
+  -DarchetypeGroupId=io.github.ktestify \
+  -DarchetypeArtifactId=ktestify-plugin-archetype \
+  -DarchetypeVersion=1.0-SNAPSHOT \
+  -DgroupId=io.github.ktestify \
+  -DartifactId=ktestify-plugin-myplugin \
+  -Dversion=1.0-SNAPSHOT \
+  -Dpackage=io.github.ktestify.myplugin \
+  -DpluginShortName=myplugin \
+  -DpluginKebabId=my-plugin \
+  -DpluginPascalName=MyPlugin \
+  -DinteractiveMode=false
 ```
 
-Then follow the [Creating a Plugin](create-plugin) guide for each step.
+Then follow the [Creating a Plugin](create-plugin) guide to implement your transport logic.
 
 ---
 
@@ -194,7 +200,7 @@ If any plugin's `initialize()` fails, the entire test run aborts with `PluginExc
 4. **Release resources**, close connections and stop threads in `shutdown()`
 5. **Log diagnostics**, use SLF4J so users can troubleshoot plugin loading
 6. **Document thoroughly**, include config examples, step definitions, and usage scenarios
-7. **Follow the skeleton**, use the template repository as your starting point
+7. **Use the archetype**, start from `ktestify-plugin-archetype` to get the correct structure and build setup
 8. **Write tests**, unit tests for config parsing, integration tests with Docker
 
 ---
@@ -244,8 +250,7 @@ If steps from your plugin aren't available,
 ## Next Steps
 
 - Learn [how plugins work](plugin-system)
-- [Build your first plugin](create-plugin)
+- [Build your first plugin](create-plugin) with the Maven archetype
 - Explore the [Azure Blob reference](azureblob)
 - Send results with the [Notifications reference](notifications)
-- Check out the [plugin skeleton](https://github.com/ktestify/ktestify-plugin-skeleton)
-
+- Check out the [plugin archetype](https://github.com/ktestify/ktestify-plugin-archetype)
