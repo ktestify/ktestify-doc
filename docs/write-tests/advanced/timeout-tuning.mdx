@@ -54,6 +54,12 @@ So if `readTimeout = 30s`, the outer guard fires at `35s`. This is intentional, 
 
 ---
 
+## Pinned "now" for multi-row assertion steps
+
+`consumerDeltaTime` seeks back from "now". For a single-row step, "now" is simply the moment the step runs. For a **multi-row** single-record assertion step (see [Multi-row DataTables →](multi-row-datatables)), KTestify captures "now" **once**, at the top of the step, and reuses that same value (`ConsumerContext.referenceTimestamp`) for every row, so all rows compute an identical seek window instead of drifting as earlier rows in the step take time to complete.
+
+---
+
 ## When to increase timeouts
 
 | Situation | Recommendation |

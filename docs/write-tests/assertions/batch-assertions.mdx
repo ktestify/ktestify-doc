@@ -55,6 +55,18 @@ Then expected records from files based on schema
 
 ---
 
+## Single-row only
+
+Unlike single-record assertion steps (see [Multi-row DataTables](../advanced/multi-row-datatables)), batch steps accept **exactly one DataTable row**. That one row already describes an any-to-all match across `expectedRecordsCount` records collected from a single consumer call, adding more rows would be ambiguous, so a multi-row DataTable here is rejected immediately:
+
+```
+This step only supports a single DataTable row but 2 rows were provided.
+```
+
+If you need several independent batches, or several unrelated single records against the same topic, use separate step invocations, or the multi-row single-record assertion steps ([raw matchers →](raw-matchers), [Avro matchers →](avro-matchers)) instead.
+
+---
+
 ## Ordering caveat
 
 Records are matched positionally in the order they are fetched from Kafka partitions. If your pipeline does not guarantee ordering (e.g. multiple partitions), use individual assertion steps per record with `expectedRecordKey` filtering instead.
@@ -67,4 +79,5 @@ Records are matched positionally in the order they are fetched from Kafka partit
 - [Avro matchers →](avro-matchers)
 - [Batch testing guide →](../advanced/batch-testing)
 - [Timeout tuning →](../advanced/timeout-tuning)
+- [Multi-row DataTables →](../advanced/multi-row-datatables)
 

@@ -76,6 +76,21 @@ Then expected record should match key
 
 ---
 
+## Multiple rows, same topic
+
+Add multiple rows to validate several records in one step, sequentially, in order, as long as every row targets the **same physical topic**:
+
+```gherkin
+Then expected record from file
+  | topicAlias | file             | expectedRecordKey | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | expected-1.json  | order-001          | 30                   | 60                |
+  | orders-out | expected-2.json  | order-002          | 30                   | 60                |
+```
+
+All rows in the same step share one pinned `referenceTimestamp` ("now" captured once at the top of the step), so their `consumerDeltaTime` seek windows are computed identically instead of drifting row-to-row. Mixing topics in one DataTable throws `TopicMismatchException` before any consumer call is made. See [Multi-row DataTables](../advanced/multi-row-datatables) for the full rules, including why batch steps stay single-row.
+
+---
+
 ## See also
 
 - [XML matchers →](xml-matchers)
@@ -83,4 +98,5 @@ Then expected record should match key
 - [Batch assertions →](batch-assertions)
 - [Watcher →](watcher)
 - [Timeout tuning →](../advanced/timeout-tuning)
+- [Multi-row DataTables →](../advanced/multi-row-datatables)
 

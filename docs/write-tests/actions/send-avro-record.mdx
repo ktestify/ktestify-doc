@@ -66,9 +66,27 @@ Given schema
 
 ---
 
+## Multiple records in one step
+
+Add multiple rows to the DataTable to produce several Avro records in sequence, in row order:
+
+```gherkin
+When record from file based on schema is sent
+  | topicName | file           | schemaName | recordKey |
+  | orders-in | order-001.json | Order      | ord-001   |
+  | orders-in | order-002.json | Order      | ord-002   |
+```
+
+:::info[Same topic required]
+Every row must resolve to the **same physical topic**. Mixing topics in one DataTable throws `TopicMismatchException` before any record is sent, split into separate step invocations instead. See [Multi-row DataTables](../advanced/multi-row-datatables) for the full rules.
+:::
+
+---
+
 ## See also
 
 - [Avro assertions →](../assertions/avro-matchers)
 - [Schemas background step →](../background/schemas)
 - [Configuration →](../configuration)
+- [Multi-row DataTables →](../advanced/multi-row-datatables)
 

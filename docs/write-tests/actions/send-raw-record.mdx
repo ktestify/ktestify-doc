@@ -54,7 +54,7 @@ The file can contain any text content, JSON, XML, plain text, CSV. KTestify send
 
 ## Multiple records in one step
 
-Add multiple rows to the DataTable to produce several records in sequence:
+Add multiple rows to the DataTable to produce several records in sequence, in row order:
 
 ```gherkin
 When record from file is sent
@@ -63,10 +63,15 @@ When record from file is sent
   | orders-in | order-002.json | order-002 |
 ```
 
+:::info[Same topic required]
+Every row must resolve to the **same physical topic**. Mixing topics in one DataTable throws `TopicMismatchException` before any record is sent, split into separate step invocations instead. See [Multi-row DataTables](../advanced/multi-row-datatables) for the full rules (including single-record assertion steps and batch steps).
+:::
+
 ---
 
 ## See also
 
 - [Send Avro record →](send-avro-record)
 - [Dynamic variables →](../dynamic-variables)
+- [Multi-row DataTables →](../advanced/multi-row-datatables)
 

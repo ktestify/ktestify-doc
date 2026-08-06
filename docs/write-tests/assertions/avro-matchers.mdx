@@ -85,9 +85,18 @@ Then expected record based on schema should have fields matching from file
 
 ---
 
+## Multiple rows, same topic
+
+Single-record Avro assertion steps (file match, field value match, key-only, positional fields) support multiple rows validated sequentially, in order, as long as every row targets the **same physical topic**.
+
+All rows share one pinned `referenceTimestamp` so their delta-time seek windows don't drift. Mixing topics throws `TopicMismatchException` before any consumer call is made. See [Multi-row DataTables →](../advanced/multi-row-datatables) for the full rules.
+
+---
+
 ## See also
 
 - [Batch Avro assertions →](batch-assertions)
 - [Schemas background step →](../background/schemas)
 - [Configuration →](../configuration)
+- [Multi-row DataTables →](../advanced/multi-row-datatables)
 

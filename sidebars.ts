@@ -66,6 +66,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'write-tests/advanced/timeout-tuning',
             'write-tests/advanced/batch-testing',
+            'write-tests/advanced/multi-row-datatables',
           ],
         },
         'write-tests/step-reference',

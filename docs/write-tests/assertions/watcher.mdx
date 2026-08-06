@@ -49,6 +49,21 @@ For `should not appear`, set `consumerReadTimeout` to a value that is long enoug
 
 ---
 
+## Multiple rows, same topic
+
+Both watcher steps support multiple rows — useful for checking presence/absence of several distinct keys on the same topic in one step. Rows are validated sequentially, in order, and share one pinned `referenceTimestamp` so their seek windows don't drift. Every row must target the **same physical topic**; mixing topics throws `TopicMismatchException` before any consumer call is made:
+
+```gherkin
+And record should not appear in topic
+  | topicAlias | topicType | expectedRecordKey | consumerReadTimeout |
+  | orders-out | raw       | order-invalid-1   | 10                  |
+  | orders-out | raw       | order-invalid-2   | 10                  |
+```
+
+See [Multi-row DataTables](../advanced/multi-row-datatables) for the full rules.
+
+---
+
 ## Example : filtering scenario
 
 ```gherkin

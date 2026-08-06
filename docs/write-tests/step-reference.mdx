@@ -120,6 +120,10 @@ Given schema
 
 ## Actions — `When` steps
 
+:::info[Multi-row DataTables]
+Producer and script steps below accept multiple DataTable rows, executed sequentially in order. Producer steps additionally require every row to resolve to the **same physical topic** (`TopicMismatchException` otherwise). See [Multi-row DataTables](advanced/multi-row-datatables) for full details.
+:::
+
 ### `When record from file is sent`
 
 Produces a raw String message to a Kafka input topic.
@@ -192,6 +196,10 @@ Fails if exit code ≠ 0.
 ---
 
 ## Assertions : `Then` / `And` steps
+
+:::info[Multi-row DataTables]
+Every single-record assertion step below (all except the two batch steps) accepts multiple DataTable rows, validated sequentially in order, **provided every row targets the same physical topic** (`TopicMismatchException` otherwise). All rows in the same step share one pinned `referenceTimestamp` so delta-time seek windows don't drift row-to-row. The batch steps (`expected records from files` / `...based on schema`) remain strictly single-row. See [Multi-row DataTables →](advanced/multi-row-datatables) for full details.
+:::
 
 ### `Then expected record from file`
 
@@ -398,3 +406,10 @@ Same columns as `record should appear in topic`.
 | `expected records from files based on schema` (batch) | ❌ | ✅ |
 | `record should (not) appear in topic` | ✅ both | ✅ both |
 
+---
+
+## See also
+
+- [Multi-row DataTables →](advanced/multi-row-datatables)
+- [Timeout tuning →](advanced/timeout-tuning)
+- [Batch testing →](advanced/batch-testing)

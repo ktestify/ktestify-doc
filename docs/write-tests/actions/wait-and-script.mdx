@@ -37,6 +37,19 @@ When script is executed
 
 The step **fails** if the script exits with a non-zero exit code.
 
+### Multiple scripts in one step
+
+Add multiple rows to run several scripts in sequence, in row order. Execution **fails fast**, the step stops at the first script that exits non-zero:
+
+```gherkin
+When script is executed
+  | scriptPath           | scriptArgs |
+  | ./scripts/step-1.sh  |            |
+  | ./scripts/step-2.sh  | arg1       |
+```
+
+There is no topic concept for script steps, so no same-topic guard rail applies here (unlike producer/assertion steps, see [Multi-row DataTables](../advanced/multi-row-datatables)).
+
 ### Example : trigger a downstream reset before consuming
 
 ```gherkin
