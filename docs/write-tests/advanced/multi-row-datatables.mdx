@@ -1,0 +1,125 @@
+q---
+sidebar_position: 3
+title: Multi-Row DataTables
+description: How KTestify handles DataTables with more than one data row across producer, assertion, and batch steps.
+---
+
+# Multi-Row DataTables
+
+Most KTestify steps accept a Cucumber `DataTable` with **more than one data row**. What happens with those extra rows differs by step category, this page is the single source of truth.
+
+---
+
+## Summary
+
+| Step category | Multi-row support | Same-topic required? | Notes |
+|---|---|---|---|
+| Producer (`When record from file is sent`, `...based on schema is sent`) | ✅ Yes | ✅ Yes | Rows sent sequentially, in order |
+| Script execution (`When script is executed`, `And execute script`) | ✅ Yes | N/A | Rows run sequentially, fail-fast on first non-zero exit |
+| Single-record assertions (`Then expected record from file`, XML/XPath, Avro file/field match, key-only, key+value, watchers) | ✅ Yes | ✅ Yes | Rows validated sequentially, in order, sharing one pinned "now" |
+| Batch assertions (`expected records from files`, `...based on schema`) | ❌ Single row only | — | The one row already describes an any-to-all match across N files |
+
+---
+
+## Producer steps : always multi-row
+
+Producing a Kafka record is a stateless operation, there's no offset/seek math involved, so every row of the DataTable is sent, **in row order**, without restriction other than the same-topic guard rail below.
+
+```gherkin
+When record from file is sent
+  | topicName | file           | recordKey |
+  | orders-in | order-001.json | order-001 |
+  | orders-in | order-002.json | order-002 |
+```
+
+Both records are produced, in that order, before the step completes.
+
+---
+
+## Single-record assertion steps : multi-row, same topic only
+
+Every single-record assertion step (`Then expected record from file`, XML/XPath matchers, Avro file/field match, key-only/key+value assertions, and the `record should (not) appear in topic` watchers) drives **one Kafka consumer call per row**. Supporting arbitrary multi-topic rows here would reopen the offset-skew problem the framework works hard to avoid (see below), so KTestify only allows multiple rows **when they all target the same physical topic**:
+
+```gherkin
+Then expected record from file
+  | topicAlias | file             | expectedRecordKey | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | expected-1.json  | order-001          | 30                   | 60                |
+  | orders-out | expected-2.json  | order-002          | 30                   | 60                |
+```
+
+Both rows are validated, sequentially, in order, against `orders-out`.
+
+### Why "now" is pinned once per step
+
+`consumerDeltaTime` works by seeking back `N` seconds from "now" before polling. If each row of a multi-row step recomputed "now" independently, the seek window would **drift** between rows, records the pipeline produced between row 1's fetch and row 2's fetch could fall outside row 2's window and be missed, or the two rows' windows could disagree entirely on a slow-running step.
+
+To avoid this, KTestify captures `System.currentTimeMillis()` **once**, at the top of the step, and reuses that exact value (`ConsumerContext.referenceTimestamp`) for every row's `calculateDeltaTime()` call. All rows in the same step therefore compute an identical seek window, regardless of how long earlier rows in the same step took to complete.
+
+---
+
+## Same-topic guard rail
+
+Both producer steps and single-record assertion steps resolve the topic of every DataTable row and assert they all point to the **same physical topic** (namespaced topic name + type) before doing anything else, no partial sends, no partial validation.
+
+```gherkin
+# ❌ This throws immediately — mixed topics in one DataTable
+When record from file is sent
+  | topicName  | file           | recordKey |
+  | orders-in  | order-001.json | order-001 |
+  | invoices-in| invoice-1.json | inv-001   |
+```
+
+```
+TopicMismatchException: A DataTable can only reference a single topic per step, but 2 distinct
+topics were found: [ktestify.orders-in#INPUT, ktestify.invoices-in#INPUT]. Split this into
+separate step invocations, one per topic.
+```
+
+Split into two separate step invocations instead:
+
+```gherkin
+When record from file is sent
+  | topicName | file            | recordKey |
+  | orders-in | order-001.json  | order-001 |
+
+When record from file is sent
+  | topicName   | file           | recordKey |
+  | invoices-in | invoice-1.json | inv-001   |
+```
+
+---
+
+## Batch assertion steps : still single-row only
+
+`expected records from files` and `expected records from files based on schema` remain **strictly single-row**. Their one row already describes an any-to-all match across `expectedRecordsCount` records collected from a single consumer call, adding more DataTable rows on top of that would be ambiguous (multiple independent batches? one bigger batch?) so KTestify rejects it loudly instead of guessing:
+
+```
+This step only supports a single DataTable row but 2 rows were provided.
+```
+
+If you need to assert several independent batches, or several unrelated single records, use separate step invocations, or the multi-row single-record steps above when they all share a topic.
+
+---
+
+## Script execution steps
+
+`When script is executed` / `And execute script` support multiple rows unconditionally, there's no topic concept involved. Each row runs sequentially and the step fails fast on the first script that exits non-zero:
+
+```gherkin
+When script is executed
+  | scriptPath           | scriptArgs |
+  | ./scripts/step-1.sh  |            |
+  | ./scripts/step-2.sh  | arg1       |
+```
+
+---
+
+## See also
+
+- [Send raw record →](../actions/send-raw-record)
+- [Send Avro record →](../actions/send-avro-record)
+- [Raw matchers →](../assertions/raw-matchers)
+- [Batch assertions →](../assertions/batch-assertions)
+- [Watcher →](../assertions/watcher)
+- [Timeout tuning →](timeout-tuning)
+
