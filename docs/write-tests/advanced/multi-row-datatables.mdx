@@ -1,4 +1,4 @@
-q---
+---
 sidebar_position: 3
 title: Multi-Row DataTables
 description: How KTestify handles DataTables with more than one data row across producer, assertion, and batch steps.
@@ -42,7 +42,7 @@ Every single-record assertion step (`Then expected record from file`, XML/XPath 
 
 ```gherkin
 Then expected record from file
-  | topicAlias | file             | expectedRecordKey | consumerReadTimeout | consumerDeltaTime |
+  | topicAlias | file             | expectedRecordKey | consumerReadTimeout   | consumerDeltaTime |
   | orders-out | expected-1.json  | order-001          | 30                   | 60                |
   | orders-out | expected-2.json  | order-002          | 30                   | 60                |
 ```
