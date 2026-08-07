@@ -1,0 +1,149 @@
+---
+sidebar_position: 3
+title: Synchronous Transports
+description: RequestResponseClient, AbstractSynchronousConsumer, and PollingRequestResponseClient, the sibling contracts for HTTP, gRPC, and other call/response transports.
+---
+
+# Synchronous Transports (`1.1.1`)
+
+`RecordFetcher<V>` (see [Adding a Transport →](adding-a-transport)) models a background stream you poll until a record appears, a great fit for Kafka or Azure Blob polling, but the wrong shape for a transport where the caller sends a request and gets an answer immediately.
+
+Since `1.1.1`, `ktestify-core` ships a second, sibling transport contract for exactly that case: HTTP, gRPC, SOAP, or any other call/response protocol.
+
+---
+
+## Why a second contract instead of forcing `RecordFetcher`
+
+Forcing an HTTP call through `RecordFetcher<V>.fetch()` would be dishonest, that method takes no argument and is documented to block until something appears on a subscription. An HTTP request is caller-initiated and synchronous, it does not "wait for a record to appear", it sends a request right now and gets a response.
+
+The alternative, writing a plugin with its own ad hoc action/validation services and skipping the core transport contracts entirely, would mean that plugin stops following the shared architecture. It would also not help the next synchronous transport that comes along.
+
+So instead, `RequestResponseClient<Req, V>` sits next to `RecordFetcher<V>` as an equally first class contract, returning the same `List<ConsumedRecord<V>>` shape, so the entire assertion layer (`RecordMatcher`, `MatchContext`, `MatchResult`, `RecordMatcherFactory`) is reused unchanged regardless of which contract a transport implements.
+
+---
+
+## The contract
+
+```java
+public interface RequestResponseClient<Req, V> extends AutoCloseable {
+
+    List<ConsumedRecord<V>> execute(Req request) throws FetchException;
+
+    @Override
+    void close();
+}
+```
+
+- `Req` is whatever request shape your transport needs (for example an HTTP request spec with method, URL, headers, and body).
+- `execute(...)` returns a non-null, non-empty list, normally exactly one `ConsumedRecord<V>`, wrapping the response.
+- `FetchException` is thrown on connection errors, timeouts, or any non-recoverable transport error, exactly like `RecordFetcher.fetch()`.
+- `close()` releases connection pools or other resources, and must be idempotent.
+
+---
+
+## Mapping a response to `ConsumedRecord`
+
+There is no new response type. A synchronous transport builds a plain `ConsumedRecord<V>`, using the new `attributes` map for status/metadata that does not belong under `headers`:
+
+| `ConsumedRecord` field | Typical HTTP mapping |
+|---|---|
+| `source` | request URL |
+| `partition` | `0`, no concept |
+| `offset` | `-1`, no concept |
+| `key` | HTTP method (`GET`, `POST`, ...) |
+| `value` | response body as a `String` |
+| `timestamp` | the instant the response was received |
+| `headers` | response HTTP headers |
+| `attributes` | `{"statusCode": "200", "elapsedMs": "42"}` |
+
+Because the body lands in `value` and status/metadata lands in `attributes`, every existing raw matcher (`FileRecordMatcher`, `XmlRecordMatcher`, `XPathRecordMatcher`, `FieldsRecordMatcher`) keeps working unchanged for body assertions, and the new `AttributeRecordMatcher` (see [Built-in matchers →](../matchers/built-in-matchers)) handles status/metadata assertions. No new matcher code is needed per transport.
+
+---
+
+## Orchestration - `AbstractSynchronousConsumer<Req, V>`
+
+Mirrors `AbstractKafkaConsumer`, but wired to a `RequestResponseClient` instead of a per-call `KafkaRecordFetcher`:
+
+```java
+public abstract class AbstractSynchronousConsumer<Req, V> extends AbstractConsumer {
+
+    protected final RequestResponseClient<Req, V> client;
+    protected final RecordMatcher<V> matcher;
+
+    protected abstract Req buildRequest();
+    protected abstract MatchContext buildMatchContext();
+
+    @Override
+    public Boolean call() throws ConsumerException {
+        try {
+            Req request = buildRequest();
+            List<ConsumedRecord<V>> records = client.execute(request);
+            MatchResult result = matcher.match(records, buildMatchContext());
+            return result.isPassed();
+        } catch (FetchException e) {
+            throw new ConsumerException(e.getMessage());
+        }
+    }
+}
+```
+
+A concrete consumer only needs to implement `buildRequest()` and `buildMatchContext()`, everything else is inherited.
+
+### Client lifecycle, note the difference from Kafka
+
+`AbstractKafkaConsumer` creates a fresh `KafkaRecordFetcher` per call and closes it in a `finally` block. `AbstractSynchronousConsumer` does **not** do that. A `RequestResponseClient` is expected to be a longer lived, connection pooled client, for example `java.net.http.HttpClient`, owned and closed once by the plugin's shared scenario resources, not created and discarded per request.
+
+---
+
+## Retrying, `PollingRequestResponseClient<Req, V>`
+
+Every synchronous transport eventually needs "keep calling until the answer looks right", for example asserting an endpoint eventually returns `200` once an asynchronous side effect completes. Instead of every plugin writing its own sleep loop, `ktestify-core` ships a generic decorator:
+
+```java
+public class PollingRequestResponseClient<Req, V> implements RequestResponseClient<Req, V> {
+
+    public PollingRequestResponseClient(
+            RequestResponseClient<Req, V> delegate,
+            Predicate<List<ConsumedRecord<V>>> untilPredicate,
+            long timeoutMs,
+            long pollIntervalMs) { ... }
+
+    @Override
+    public List<ConsumedRecord<V>> execute(Req request) throws FetchException { ... }
+}
+```
+
+It wraps any other `RequestResponseClient`, retries `execute(...)` until `untilPredicate` passes or `timeoutMs` elapses, and on timeout returns the **last** result obtained instead of throwing, so the following `RecordMatcher` failure message shows the real final state rather than a generic timeout string. A `FetchException` from the delegate is only propagated when no successful attempt has ever produced a result.
+
+---
+
+## Implementing a new synchronous transport
+
+```
+ktestify-plugin-http/
+├── pom.xml
+└── src/main/java/io/github/ktestify/http/
+    ├── HttpPlugin.java                  ← implements KtestifyPlugin
+    ├── io/
+    │   ├── HttpRequestSpec.java         ← the Req type: method, url, headers, query params, body
+    │   └── HttpRequestResponseClient.java  ← implements RequestResponseClient<HttpRequestSpec, String>
+    ├── HttpConsumer.java                ← extends AbstractSynchronousConsumer<HttpRequestSpec, String>
+    └── steps/
+        └── ...                          ← Cucumber step definitions
+```
+
+`HttpRequestResponseClient` wraps `java.net.http.HttpClient` (already used elsewhere in the project, see the notifications plugin's webhook channel), builds a `HttpRequest`, sends it, and maps the `HttpResponse` to a `ConsumedRecord<String>` using the table above.
+
+`HttpConsumer` only needs to supply `buildRequest()` (read the endpoint, method, path, and body from its own context object) and `buildMatchContext()` (map `matchMethod`, `matchFilePaths`, `excludedFields`, and `expectedAttributes`, exactly like `AbstractKafkaConsumer.buildMatchContext()` does for Kafka).
+
+No `RecordFetcher` implementation is needed for a purely synchronous transport, and no new matcher code is needed for body assertions.
+
+---
+
+## See also
+
+- [Adding a Transport →](adding-a-transport), the asynchronous, `RecordFetcher<V>` based path
+- [Architecture →](../architecture), how both transport contracts feed the same orchestration and assertion layers
+- [Core Concepts →](../core-concepts), `ConsumedRecord.attributes` and `MatchContext.expectedAttributes`
+- [Built-in matchers →](../matchers/built-in-matchers), `AttributeRecordMatcher`
+
