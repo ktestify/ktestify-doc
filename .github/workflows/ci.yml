@@ -1,0 +1,21 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "static/**"
+      - "docusaurus.config.ts"
+      - "sidebars.ts"
+      - "package.json"
+      - "package-lock.json"
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    uses: ktestify/.github/.github/workflows/reusable-docusaurus.yml@main
+    with:
+      node-version: "20"
