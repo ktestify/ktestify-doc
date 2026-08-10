@@ -8,23 +8,28 @@ description: Key domain types in ktestify-core, ConsumedRecord, MatchContext, Ma
 
 ## `ConsumedRecord<V>`
 
-The **only** data type that crosses layer boundaries. It is the universal output of the transport layer and the universal input of the assertion layer.
+The **only** data type that crosses layer boundaries. It is the universal output of the transport layer (`RecordFetcher<V>` for asynchronous transports, `RequestResponseClient<Req, V>` for synchronous ones since `1.1.1`) and the universal input of the assertion layer.
 
 ```java
 @Value
 public class ConsumedRecord<V> {
-    String  source;        // topic name
+    String  source;        // topic name, container name, request URL, ...
     int     partition;
     long    offset;
     String  key;
     V       value;         // String for raw, GenericRecord for Avro
-    long    timestamp;
-    Headers headers;
+    Instant timestamp;
+    Map<String, String> headers;      // protocol headers (Kafka headers, HTTP response headers, ...)
+    Map<String, String> attributes;   // NEW in 1.1.1, transport metadata, never null, defaults to emptyMap()
 
     static <V> ConsumedRecord<V> fromKafkaRecord(ConsumerRecord<String, V> record) { ... }
     MatchedRecord toMatchedRecord() { ... }
 }
 ```
+
+`attributes` holds structured transport metadata that does not belong under `headers`, for example an HTTP status code and elapsed time, a future gRPC status code, or an MQ reason code. Kafka and Azure Blob leave it empty. A synchronous transport plugin populates it, and `AttributeRecordMatcher` (see [Built-in matchers →](matchers/built-in-matchers)) asserts against it.
+
+`ConsumedRecord` ships both a full constructor (accepting `attributes`) and a backward-compatible overload without it (defaults to `Collections.emptyMap()`), plus a `@Builder`, so existing transports keep compiling unchanged.
 
 ---
 
@@ -38,7 +43,7 @@ Deduplication token, represents a record that has already been claimed by a cons
 
 ## `MatchContext`
 
-Immutable context object passed to a `RecordMatcher`. Built by `AbstractKafkaConsumer.buildMatchContext()` from the `ConsumerContext`.
+Immutable context object passed to a `RecordMatcher`. Built by `AbstractKafkaConsumer.buildMatchContext()` (or `AbstractSynchronousConsumer.buildMatchContext()` for synchronous transports) from the `ConsumerContext`.
 
 ```java
 @Value @Builder
@@ -49,6 +54,7 @@ public class MatchContext {
     boolean       strictMatching;
     String        matchKey;
     String        matchValue;
+    Map<String,String> expectedAttributes;  // NEW in 1.1.1, defaults to emptyMap(), used by AttributeRecordMatcher
 
     // Convenience, for single-record matchers
     public String getMatchFilePath() {
@@ -57,6 +63,8 @@ public class MatchContext {
     }
 }
 ```
+
+`expectedAttributes` holds the key/value pairs to assert against a record's `attributes` map, for example `{"statusCode": "200"}`. It follows the same convention as `excludedFields`, always non-null, defaults to an empty map, and matchers check `isEmpty()` rather than `null`.
 
 ---
 
@@ -125,9 +133,27 @@ RecordMatcherFactory.forRaw("matchFile")   → FileRecordMatcher
 RecordMatcherFactory.forAvro("matchFile")  → AvroFileRecordMatcher
 RecordMatcherFactory.forRaw("matchXML")    → XmlRecordMatcher
 RecordMatcherFactory.forAvro("matchXML")   → throws ConsumerException  ← not supported
+RecordMatcherFactory.forRaw("methodMatchAttributes")  → AttributeRecordMatcher<>()   // NEW in 1.1.1, raw only
 ```
 
 See [Built-in matchers →](matchers/built-in-matchers) for the full mapping table.
+
+---
+
+## Synchronous transports (`1.1.1`)
+
+Alongside `RecordFetcher<V>` (async, poll until a record appears), `ktestify-core` now ships a sibling contract for synchronous, caller-initiated transports:
+
+```java
+public interface RequestResponseClient<Req, V> extends AutoCloseable {
+    List<ConsumedRecord<V>> execute(Req request) throws FetchException;
+    void close();
+}
+```
+
+Its orchestration counterpart, `AbstractSynchronousConsumer<Req, V>`, mirrors `AbstractKafkaConsumer` (build a request, call `execute`, hand the result to a `RecordMatcher`, return `MatchResult.isPassed()`), and a generic decorator, `PollingRequestResponseClient<Req, V>`, adds retry-until-predicate-or-timeout semantics that any synchronous transport plugin can reuse instead of writing its own poll loop.
+
+Full details, including the client lifecycle and how to implement a new synchronous transport, live on the [Synchronous transports →](transports/synchronous-transports) page.
 
 ---
 

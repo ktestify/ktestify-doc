@@ -8,6 +8,8 @@ description: KTestify's three-layer architecture. Transport, Orchestration, and 
 
 KTestify is built on a strict **three-layer separation of concerns**. Each layer has one job and knows nothing about the other layers' implementation details.
 
+Since version `1.1.1`, the transport layer has **two sibling contracts** instead of one. `RecordFetcher<V>` models a background stream you poll until a record appears (Kafka, Azure Blob). `RequestResponseClient<Req, V>` models a synchronous, caller-initiated call where you send a request right now and get an answer immediately (HTTP, gRPC, SOAP). Both return `List<ConsumedRecord<V>>`, so the orchestration and assertion layers below stay identical no matter which contract a given transport implements.
+
 ```mermaid
 ---
 config:
@@ -16,12 +18,14 @@ config:
 flowchart LR
     subgraph TRANSPORT
         A[KafkaRecordFetcher]
+        A2[RequestResponseClient&lt;Req,V&gt;]
     end
 
     subgraph ORCHESTRATION
         B[AbstractKafkaConsumer]
         C[RawKafkaConsumer]
         D[AvroKafkaConsumer]
+        B2[AbstractSynchronousConsumer]
     end
 
     subgraph ASSERTION
@@ -29,26 +33,32 @@ flowchart LR
         F[FileRecordMatcher]
         G[XmlRecordMatcher]
         H[AvroFileRecordMatcher]
+        I[AttributeRecordMatcher]
     end
 
     A -->|List&lt;ConsumedRecord&gt;| B
     B --> C
     B --> D
     B -->|List&lt;ConsumedRecord&gt;| E
+    A2 -->|List&lt;ConsumedRecord&gt;| B2
+    B2 -->|List&lt;ConsumedRecord&gt;| E
     E --> F
     E --> G
     E --> H
+    E --> I
 
     classDef transport fill:#E1F5EE,stroke:#0F6E56,color:#085041
     classDef orchestration fill:#EEEDFE,stroke:#534AB7,color:#3C3489
     classDef assertion fill:#FAC775,stroke:#854F0B,color:#412402
 
-    class A transport
-    class B,C,D orchestration
-    class E,F,G,H assertion
+    class A,A2 transport
+    class B,C,D,B2 orchestration
+    class E,F,G,H,I assertion
 ```
 
 **`ConsumedRecord<V>` is the only data type that crosses layer boundaries.**
+
+Synchronous transports additionally populate a new `attributes` map on `ConsumedRecord` (an HTTP status code, a future gRPC status code, an MQ reason code) for metadata that is not a protocol header. Asynchronous transports leave it empty. See [Core Concepts →](core-concepts) for the full field list.
 
 ---
 
@@ -69,6 +79,22 @@ public interface RecordFetcher<V> extends AutoCloseable {
 ```
 
 Swapping Kafka for IBM MQ means writing a new `IbmMqRecordFetcher<V>`, nothing else changes.
+
+---
+
+### Transport, synchronous - `RequestResponseClient<Req, V>`
+
+Knows: how to send one request and turn the answer into `ConsumedRecord`.
+Does NOT know: matchers, files, test frameworks, and does not block waiting for something to "appear".
+
+```java
+public interface RequestResponseClient<Req, V> extends AutoCloseable {
+    List<ConsumedRecord<V>> execute(Req request) throws FetchException;
+    void close();
+}
+```
+
+This is the contract an HTTP client plugin implements. See [Synchronous Transports →](transports/synchronous-transports) for the full guide.
 
 ---
 
@@ -94,6 +120,27 @@ try {
 
 ---
 
+### Orchestration, synchronous - `AbstractSynchronousConsumer<Req, V>`
+
+Knows: buildRequest → execute → match → result wiring, for transports where the caller supplies the request explicitly instead of the fetcher blocking on a subscription.
+Does NOT know: HTTP, gRPC, or any transport internals.
+
+```java
+// AbstractSynchronousConsumer.call(), simplified
+try {
+    Req request = buildRequest();
+    List<ConsumedRecord<V>> records = client.execute(request);   // transport
+    MatchResult result = matcher.match(records, buildMatchContext()); // assertion
+    return result.isPassed();
+} catch (FetchException e) {
+    throw new ConsumerException(e.getMessage());
+}
+```
+
+Unlike `AbstractKafkaConsumer`, the client is not closed in a `finally` block here. A `RequestResponseClient` is expected to be a longer lived, connection pooled client (like `java.net.http.HttpClient`), owned and closed by the plugin's shared scenario resources, not created and discarded per call.
+
+---
+
 ### Assertion - `RecordMatcher<V>`
 
 Knows: `ConsumedRecord`, expected values, comparison algorithm.
@@ -114,9 +161,12 @@ public interface RecordMatcher<V> {
 ktestify-core                      ktestify-cucumber
 ───────────────────────────────    ──────────────────────────────────
 RecordFetcher<V>                   BackgroundStepDefinition
+RequestResponseClient<Req,V>        ValidationStepDefinition
 KafkaRecordFetcher              ◄──────── ConsumerContext (config only)
-AbstractKafkaConsumer              ValidationStepDefinition
-RecordMatcher<V>                   ConsumerValidationService
+AbstractKafkaConsumer              ConsumerValidationService
+AbstractSynchronousConsumer
+PollingRequestResponseClient
+RecordMatcher<V>
 MatchContext / MatchResult
 ConsumedRecord<V>
 ```
@@ -138,21 +188,27 @@ flowchart TD
     C["AbstractKafkaConsumer&lt;K, V&gt;"]
     D["RawKafkaConsumer\nK=String, V=String"]
     E["AvroKafkaConsumer\nK=String, V=GenericRecord"]
+    C2["AbstractSynchronousConsumer&lt;Req, V&gt;"]
 
     A --> B --> C --> D
     C --> E
+    B --> C2
 
     F(["RecordFetcher&lt;V&gt; · interface"])
     G["KafkaRecordFetcher&lt;K, V&gt;"]
     F --> G
 
+    H(["RequestResponseClient&lt;Req,V&gt; · interface"])
+    I["PollingRequestResponseClient&lt;Req,V&gt;"]
+    H --> I
+
     classDef abstract fill:#EEEDFE,stroke:#534AB7,color:#3C3489
     classDef concrete fill:#E1F5EE,stroke:#0F6E56,color:#085041
     classDef iface fill:#FAC775,stroke:#854F0B,color:#412402
 
-    class A,B,C abstract
-    class D,E,G concrete
-    class F iface
+    class A,B,C,C2 abstract
+    class D,E,G,I concrete
+    class F,H iface
 
 ```
 
@@ -167,6 +223,7 @@ RecordMatcher<V>  (@FunctionalInterface)
 ├── FieldsRecordMatcher
 ├── FileKeyRecordMatcher
 ├── KeyRecordMatcher
+├── AttributeRecordMatcher<V>
 ├── AvroFileRecordMatcher
 ├── AvroFileKeyRecordMatcher
 ├── AvroFieldsRecordMatcher
@@ -179,5 +236,6 @@ RecordMatcher<V>  (@FunctionalInterface)
 - [Core concepts →](core-concepts)
 - [Transports, Kafka →](transports/kafka)
 - [Adding a transport →](transports/adding-a-transport)
+- [Synchronous transports →](transports/synchronous-transports)
 - [Built-in matchers →](matchers/built-in-matchers)
 

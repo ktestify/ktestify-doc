@@ -88,6 +88,7 @@ const sidebars: SidebarsConfig = {
           items: [
             'extend/transports/kafka',
             'extend/transports/adding-a-transport',
+            'extend/transports/synchronous-transports',
           ],
         },
         {

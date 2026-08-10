@@ -1,12 +1,12 @@
 ---
 sidebar_position: 1
 title: Built-in Matchers
-description: Reference for all 11 built-in RecordMatcher implementations and when to use each.
+description: Reference for all built-in RecordMatcher implementations and when to use each.
 ---
 
 # Built-in Matchers
 
-KTestify ships 11 `RecordMatcher<V>` implementations, split into raw (String) and Avro (GenericRecord) variants. They are selected automatically by `RecordMatcherFactory` based on the `matchMethod` in `MatchContext`.
+KTestify ships 12 `RecordMatcher<V>` implementations, split into raw (String) and Avro (GenericRecord) variants. They are selected automatically by `RecordMatcherFactory` based on the `matchMethod` in `MatchContext`.
 
 ---
 
@@ -20,6 +20,7 @@ KTestify ships 11 `RecordMatcher<V>` implementations, split into raw (String) an
 | `methodMatchXML` | `XmlRecordMatcher` | ❌ `ConsumerException` |
 | `methodMatchXPath` | `XPathRecordMatcher` | ❌ `ConsumerException` |
 | `methodRecordKeyMatch` | `KeyRecordMatcher` | `AvroKeyRecordMatcher` |
+| `methodMatchAttributes` | `AttributeRecordMatcher<V>` | ❌ `ConsumerException` |
 | `null` / blank | `NoOpRecordMatcher<V>` | `NoOpRecordMatcher<V>` |
 
 ```java
@@ -89,6 +90,18 @@ Always returns `MatchResult.pass()`. Used when `matchMethod` is `null` or blank,
 
 ---
 
+### `AttributeRecordMatcher<V>` (`1.1.1`)
+
+Generic, transport agnostic matcher introduced alongside `RequestResponseClient<Req, V>` for synchronous transports. Asserts one or more entries of `ConsumedRecord.getAttributes()` against `MatchContext.getExpectedAttributes()`. Never inspects `getValue()`, so it works for any `V`, not only `String`.
+
+- **MatchContext fields used:** `expectedAttributes` (map of key to expected value)
+- **Matching rule:** every key in `expectedAttributes` must be present in the actual record's `attributes` with an exactly equal String value, only the first record in the list is used
+- **On empty `expectedAttributes`:** returns `MatchResult.pass()` immediately, nothing to assert
+- **Typical use:** HTTP status code assertions (`{"statusCode": "200"}`), reusable later by any future transport that populates `attributes` (gRPC status, MQ reason code, script exit code)
+- **Not available for Avro**, `attributes` is populated by synchronous request/response clients, not Avro consumers
+
+---
+
 ## Avro matchers (V = GenericRecord)
 
 All Avro matchers first deserialise the `GenericRecord` to a JSON `Map` via `AvroUtils.toJsonMap()`, then delegate to comparison logic equivalent to their raw counterparts.
@@ -125,4 +138,5 @@ Avro equivalent of `FieldsRecordMatcher`. Extracts a character range from the JS
 2. `matchFilePaths` is always a `List<String>`, single-record matchers use `get(0)`, batch matchers iterate by index.
 3. XML/XPath matchers throw `ConsumerException` when called via `RecordMatcherFactory.forAvro()`.
 4. `NoOpRecordMatcher` is the default when no match method is configured.
+5. `expectedAttributes` defaults to `Collections.emptyMap()`, `AttributeRecordMatcher` checks `isEmpty()`, never `null`, same convention as `excludedFields`.
 
