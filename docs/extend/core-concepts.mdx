@@ -8,7 +8,7 @@ description: Key domain types in ktestify-core, ConsumedRecord, MatchContext, Ma
 
 ## `ConsumedRecord<V>`
 
-The **only** data type that crosses layer boundaries. It is the universal output of the transport layer (`RecordFetcher<V>` for asynchronous transports, `RequestResponseClient<Req, V>` for synchronous ones since `1.1.1`) and the universal input of the assertion layer.
+The **only** data type that crosses layer boundaries. It is the universal output of the transport layer (`RecordFetcher<V>` for asynchronous transports, `RequestResponseClient<Req, V>` for synchronous ones since `1.1.1`) and the universal input of the assertion layer. The class itself has existed since `0.3.0`; the `attributes` map was added in `1.1.1`.
 
 ```java
 @Value
@@ -20,7 +20,7 @@ public class ConsumedRecord<V> {
     V       value;         // String for raw, GenericRecord for Avro
     Instant timestamp;
     Map<String, String> headers;      // protocol headers (Kafka headers, HTTP response headers, ...)
-    Map<String, String> attributes;   // NEW in 1.1.1, transport metadata, never null, defaults to emptyMap()
+    Map<String, String> attributes;   // since 1.1.1, transport metadata, never null, defaults to emptyMap()
 
     static <V> ConsumedRecord<V> fromKafkaRecord(ConsumerRecord<String, V> record) { ... }
     MatchedRecord toMatchedRecord() { ... }
@@ -29,15 +29,17 @@ public class ConsumedRecord<V> {
 
 `attributes` holds structured transport metadata that does not belong under `headers`, for example an HTTP status code and elapsed time, a future gRPC status code, or an MQ reason code. Kafka and Azure Blob leave it empty. A synchronous transport plugin populates it, and `AttributeRecordMatcher` (see [Built-in matchers →](matchers/built-in-matchers)) asserts against it.
 
-`ConsumedRecord` ships both a full constructor (accepting `attributes`) and a backward-compatible overload without it (defaults to `Collections.emptyMap()`), plus a `@Builder`, so existing transports keep compiling unchanged.
+`ConsumedRecord` ships both a full constructor (accepting `attributes`) and a backward-compatible overload without it (defaults to `Collections.emptyMap()`), plus a `@Builder`, so existing transports keep compiling unchanged. The `attributes` field is documented as never null and defaults to an empty map, so matchers can safely call `isEmpty()` rather than checking for null.
 
 ---
 
 ## `MatchedRecord`
 
-Deduplication token, represents a record that has already been claimed by a consumer step. It holds `topic + partition + offset + key + timestamp` and is stored in the static deduplication registry.
+Deduplication token, represents a record that has already been claimed by a consumer step. It holds `topic + partition + offset + key + timestamp` and is stored in the static deduplication registry maintained by `KafkaRecordFetcher`.
 
-`MatchedRecord` deliberately **excludes `processedTime`** from `equals`/`hashCode` so that two records from the same Kafka partition+offset are always considered the same, regardless of when they were processed.
+`MatchedRecord` deliberately **excludes `processedTime`** from `equals`/`hashCode` so that two records from the same Kafka partition+offset are always considered the same, regardless of when they were processed. The `processedTime` field is annotated with Lombok `@With`, meaning it is a mutable-on-copy timestamp used for reporting, not for identity.
+
+The conversion is one way and cheap: `ConsumedRecord.toMatchedRecord()` builds the token, and `KafkaRecordFetcher` calls `MATCHED_RECORDS.contains(record.toMatchedRecord())` before claiming a record and `MATCHED_RECORDS.add(...)` after. The registry is a `ConcurrentHashMap.newKeySet()` shared across all fetcher instances in the JVM, and `KafkaRecordFetcher.clearMatchedRecords()` wipes it. In the Cucumber flow that clear happens in the `@Before` hook at the start of every scenario, which is why two steps in the same scenario never double-claim a record. If you use `KafkaRecordFetcher` directly outside Cucumber, you must call `clearMatchedRecords()` yourself before each test.
 
 ---
 
@@ -54,17 +56,17 @@ public class MatchContext {
     boolean       strictMatching;
     String        matchKey;
     String        matchValue;
-    Map<String,String> expectedAttributes;  // NEW in 1.1.1, defaults to emptyMap(), used by AttributeRecordMatcher
+    Map<String,String> expectedAttributes;  // since 1.1.1, defaults to emptyMap(), used by AttributeRecordMatcher
 
     // Convenience, for single-record matchers
     public String getMatchFilePath() {
         return matchFilePaths != null && !matchFilePaths.isEmpty()
-            ? matchFilePaths.get(0) : null;
+            ? matchFilePaths.get(0): null;
     }
 }
 ```
 
-`expectedAttributes` holds the key/value pairs to assert against a record's `attributes` map, for example `{"statusCode": "200"}`. It follows the same convention as `excludedFields`, always non-null, defaults to an empty map, and matchers check `isEmpty()` rather than `null`.
+`expectedAttributes` holds the key/value pairs to assert against a record's `attributes` map, for example `{"statusCode": "200"}`. It follows the same convention as `excludedFields`: both default to an empty collection rather than null, and matchers check `isEmpty()` instead of null. The default `buildMatchContext()` in `AbstractKafkaConsumer` sets `strictMatching` to `false` and leaves `matchKey`, `matchValue`, and `expectedAttributes` unset.
 
 ---
 
@@ -81,7 +83,9 @@ public class MatchResult {
     String  actual;
 
     static MatchResult pass()  { ... }
+    static MatchResult pass(String expected, String actual)  { ... }
     static MatchResult fail(String diff, String expected, String actual) { ... }
+    static MatchResult fail(String message)  { ... }
 }
 ```
 
@@ -95,11 +99,11 @@ Key fields:
 
 | Field | Type | Description |
 |---|---|---|
-| `topic` | `Topic` | The output topic (must be OUTPUT type — validated in builder) |
-| `matchMethod` | `String` | One of the `ConfigConstants.method*` values |
+| `topic` | `Topic` | The output topic, must be OUTPUT type, validated in the builder |
+| `matchMethod` | `String` | One of the `RecordMatcherFactory.METHOD_*` constants |
 | `matchFilePaths` | `List<String>` | Expected file paths (single or batch) |
 | `excludedFields` | `List<String>` | Field names to ignore in comparison |
-| `expectedRecordKey` | `String` | Key filter — record must match this key |
+| `expectedRecordKey` | `String` | Key filter, the record must match this key |
 | `readTimeout` | `long` | Milliseconds |
 | `consumerDeltaTime` | `long` | Milliseconds (DataTable seconds × 1000) |
 | `isBatchConsumer` | `boolean` | Enables batch fetch mode |
@@ -112,10 +116,10 @@ Key fields:
 ```java
 @Data @Builder
 public class Topic {
-    String     topicName;
-    String     topicAlias;
-    String     topicNamespace;
-    Topic.Type topicType;          // INPUT or OUTPUT
+    String          topicName;
+    String          topicAlias;
+    TopicNamespace  topicNamespace;   // nested, holds namespace + namespaceAlias
+    Topic.Type      topicType;        // INPUT or OUTPUT
 
     // Returns "namespace.topicName" or just "topicName" if no namespace
     String getNamespacedTopic() { ... }
@@ -124,19 +128,34 @@ public class Topic {
 
 ---
 
-## `RecordMatcherFactory`
+## `RecordMatcher<V>`
 
-Pure static factory, no DI, no singleton. Resolves the right `RecordMatcher` implementation based on `matchMethod` and whether the consumer is raw or Avro.
+The assertion contract. A matcher receives the records fetched by a `RecordFetcher` (or returned by a `RequestResponseClient`) and asserts them against the expected state carried by a `MatchContext`.
 
 ```java
-RecordMatcherFactory.forRaw("matchFile")   → FileRecordMatcher
-RecordMatcherFactory.forAvro("matchFile")  → AvroFileRecordMatcher
-RecordMatcherFactory.forRaw("matchXML")    → XmlRecordMatcher
-RecordMatcherFactory.forAvro("matchXML")   → throws ConsumerException  ← not supported
-RecordMatcherFactory.forRaw("methodMatchAttributes")  → AttributeRecordMatcher<>()   // NEW in 1.1.1, raw only
+@FunctionalInterface
+public interface RecordMatcher<V> {
+    MatchResult match(List<ConsumedRecord<V>> records, MatchContext context);
+}
 ```
 
-See [Built-in matchers →](matchers/built-in-matchers) for the full mapping table.
+Implementations have zero dependency on Kafka, HTTP, or any transport. They only know about `ConsumedRecord`, which is exactly why the same matcher works for every transport. Concrete implementations live in `io.github.ktestify.match.impl`: `NoOpRecordMatcher` (always passes, for consume-only scenarios), `FileRecordMatcher`, `XmlRecordMatcher`, `XPathRecordMatcher`, `FieldsRecordMatcher`, `FileKeyRecordMatcher`, `KeyRecordMatcher`, `AttributeRecordMatcher`, and their `Avro*` counterparts.
+
+---
+
+## `RecordMatcherFactory`
+
+Pure static factory, no DI, no singleton. Resolves the right `RecordMatcher` implementation based on `matchMethod` and whether the consumer is raw (`String`) or Avro (`GenericRecord`). Two typed entry points, `forRaw(String)` and `forAvro(String)`, let the compiler enforce the value type.
+
+```java
+RecordMatcherFactory.forRaw("methodMatchFile")        → FileRecordMatcher
+RecordMatcherFactory.forAvro("methodMatchFile")       → AvroFileRecordMatcher
+RecordMatcherFactory.forRaw("methodMatchXML")         → XmlRecordMatcher
+RecordMatcherFactory.forAvro("methodMatchXML")        → throws ConsumerException  (not supported for Avro)
+RecordMatcherFactory.forRaw("methodMatchAttributes")  → AttributeRecordMatcher<>()   // since 1.1.1, raw only
+```
+
+When `matchMethod` is `null` or blank, both methods return a `NoOpRecordMatcher`, which makes consume-only scenarios a first-class use case. The Avro path supports only `methodMatchFile`, `methodMatchKeyValue`, `methodFieldsToMatch`, and `methodRecordKeyMatch`. XML, XPath, and attribute matching are raw-only, so requesting them for an Avro topic throws `ConsumerException`. See [Built-in matchers →](matchers/built-in-matchers) for the full mapping table.
 
 ---
 

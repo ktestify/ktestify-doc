@@ -107,13 +107,13 @@ For Avro tests, also add:
 | HOCON key | Environment variable | Default | Description |
 |---|---|---|---|
 | `ktestify.kafka.consumer.group-id` | `KAFKA_CONSUMER_GROUP_ID` | `ktestify-consumer-group` | Kafka consumer group ID |
-| `ktestify.kafka.consumer.enable-auto-commit` | — | `false` | Auto-commit offsets. Keep `false` — KTestify manages offsets manually. |
-| `ktestify.kafka.consumer.auto-offset-reset` | — | `earliest` | What to do when no offset exists: `earliest` or `latest` |
-| `ktestify.kafka.consumer.session-timeout` | — | `30s` | Kafka consumer session timeout |
-| `ktestify.kafka.consumer.heartbeat-interval` | — | `10s` | Heartbeat interval (must be < `session-timeout / 3`) |
-| `ktestify.kafka.consumer.max-poll-records` | — | `500` | Max records returned per `poll()` call |
-| `ktestify.kafka.consumer.key-deserializer` | — | `StringDeserializer` | Key deserializer class (fully qualified) |
-| `ktestify.kafka.consumer.value-deserializer` | — | `StringDeserializer` | Value deserializer class. Avro consumers override this automatically. |
+| `ktestify.kafka.consumer.enable-auto-commit` | none | `false` | Auto-commit offsets. Keep `false` because KTestify manages offsets manually. |
+| `ktestify.kafka.consumer.auto-offset-reset` | none | `earliest` | What to do when no offset exists: `earliest` or `latest` |
+| `ktestify.kafka.consumer.session-timeout` | none | `30s` | Kafka consumer session timeout |
+| `ktestify.kafka.consumer.heartbeat-interval` | none | `10s` | Heartbeat interval (must be < `session-timeout / 3`) |
+| `ktestify.kafka.consumer.max-poll-records` | none | `500` | Max records returned per `poll()` call |
+| `ktestify.kafka.consumer.key-deserializer` | none | `StringDeserializer` | Key deserializer class (fully qualified) |
+| `ktestify.kafka.consumer.value-deserializer` | none | `StringDeserializer` | Value deserializer class. Avro consumers override this automatically. |
 
 #### Producer
 
@@ -146,9 +146,9 @@ For Avro tests, also add:
 | HOCON key | Environment variable | Default | Description |
 |---|---|---|---|
 | `ktestify.schema-registry.url` | `SCHEMA_REGISTRY_URL` | `http://localhost:8081` | Schema Registry base URL |
-| `ktestify.schema-registry.cache-capacity` | — | `50` | Number of schemas to cache in memory |
-| `ktestify.schema-registry.auto-register-schemas` | — | `true` | Automatically register new schemas when producing Avro |
-| `ktestify.schema-registry.compatibility-level` | — | `BACKWARD` | Schema compatibility level: `NONE`, `BACKWARD`, `FORWARD`, `FULL` |
+| `ktestify.schema-registry.cache-capacity` | none | `50` | Number of schemas to cache in memory |
+| `ktestify.schema-registry.auto-register-schemas` | none | `true` | Automatically register new schemas when producing Avro |
+| `ktestify.schema-registry.compatibility-level` | none | `BACKWARD` | Schema compatibility level: `NONE`, `BACKWARD`, `FORWARD`, `FULL` |
 | `ktestify.schema-registry.auth.basic-auth-credentials-source` | `SCHEMA_REGISTRY_BASIC_AUTH_CREDENTIALS_SOURCE` | `""` | Credentials source: `USER_INFO`, `URL`, `SASL_INHERIT` |
 | `ktestify.schema-registry.auth.basic-auth-user-info` | `SCHEMA_REGISTRY_BASIC_AUTH_USER_INFO` | `""` | Credentials in `username:password` format |
 | `ktestify.schema-registry.ssl.truststore-location` | `SCHEMA_REGISTRY_SSL_TRUSTSTORE_LOCATION` | `""` | Path to SSL truststore for Schema Registry |
@@ -168,8 +168,8 @@ For Avro tests, also add:
 |---|---|---|---|---|
 | `ktestify.framework.timeouts.default-read-timeout` | `KTESTIFY_DEFAULT_READ_TIMEOUT` | `10s` | **`30s`** | How long to wait for a matching record on the output topic |
 | `ktestify.framework.timeouts.consumer-delta-time` | `KTESTIFY_CONSUMER_DELTA_TIME` | `20s` | **`60s`** | How far back in time to seek before consuming (`now − delta`) |
-| `ktestify.framework.timeouts.poll-interval` | — | `100ms` | `100ms` | Kafka poll loop interval |
-| `ktestify.framework.timeouts.buffer-time` | — | `5s` | `5s` | Safety buffer added to the outer `ExecutorService` timeout on top of `default-read-timeout` |
+| `ktestify.framework.timeouts.poll-interval` | none | `100ms` | `100ms` | Kafka poll loop interval |
+| `ktestify.framework.timeouts.buffer-time` | none | `5s` | `5s` | Safety buffer added to the outer `ExecutorService` timeout on top of `default-read-timeout` |
 
 Both `default-read-timeout` and `consumer-delta-time` can be overridden **per scenario** in the validation step DataTable (values in **seconds**):
 
@@ -195,8 +195,8 @@ Then expected record from file
 | HOCON key | Environment variable | Default | Description |
 |---|---|---|---|
 | `ktestify.framework.execution.snapshot-mode` | `KTESTIFY_SNAPSHOT_MODE` | `false` | When `true`, updates expected files instead of asserting against them |
-| `ktestify.framework.execution.strict-matching` | — | `true` | Fail on any mismatch. Always `false` internally in KTestify's matchers — not user-configurable at this time. |
-| `ktestify.framework.execution.max-retries` | — | `3` | Maximum retries for transient failures |
+| `ktestify.framework.execution.strict-matching` | none | `true` | Fail on any mismatch. Always `false` internally in KTestify's matchers, not user-configurable at this time. |
+| `ktestify.framework.execution.max-retries` | none | `3` | Maximum retries for transient failures |
 
 ---
 
@@ -204,8 +204,8 @@ Then expected record from file
 
 | HOCON key | Environment variable | Default | Description |
 |---|---|---|---|
-| `ktestify.framework.reporting.enabled` | — | `true` | Enable generation of the test report |
-| `ktestify.framework.reporting.format` | — | `html` | Report format: `html`, `json`, `cucumber` |
+| `ktestify.framework.reporting.enabled` | none | `true` | Enable generation of the test report |
+| `ktestify.framework.reporting.format` | none | `html` | Report format: `html`, `json`, `cucumber` |
 | `ktestify.framework.reporting.output` | `KTESTIFY_OUTPUT_DIR` | `src/target/reports/report.html` | Output path for the generated report |
 
 ---

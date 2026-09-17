@@ -79,8 +79,26 @@ const features: Feature[] = [
     tag: 'ktestify-plugin-azureblob',
     title: 'Azure Blob plugin',
     description:
-      'Extend your test scenarios with Azure Blob Storage steps. Upload files, validate blob contents, and chain blob checks with Kafka assertions — all from the same feature file.',
+      'Extend your test scenarios with Azure Blob Storage steps. Upload files, validate blob contents, and chain blob checks with Kafka assertions, all from the same feature file.',
     href: 'https://github.com/ktestify/ktestify-plugin-azureblob',
+    badge: 'Plugin',
+  },
+  {
+    icon: <PluginIcon />,
+    tag: 'ktestify-plugin-http',
+    title: 'HTTP plugin',
+    description:
+      'Add synchronous HTTP request and response steps to your scenarios. Send requests, assert on status, body, and headers, and poll an endpoint until it returns an expected status.',
+    href: 'https://github.com/ktestify/ktestify-plugin-http',
+    badge: 'Plugin',
+  },
+  {
+    icon: <PluginIcon />,
+    tag: 'ktestify-plugin-notifications',
+    title: 'Notifications plugin',
+    description:
+      'Send suite-level notifications to Teams, Slack, or a webhook when your test run finishes. Keep your team informed of regressions without leaving the pipeline.',
+    href: 'https://github.com/ktestify/ktestify-plugin-notifications',
     badge: 'Plugin',
   },
 ];
