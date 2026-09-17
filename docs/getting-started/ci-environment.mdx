@@ -4,7 +4,7 @@ title: CI Environment
 description: Why KTestify needs a dedicated test environment, a production mirror, and how to schedule it as a daily regression gate.
 ---
 
-# CI Environment : Test Against a Production Mirror
+# CI Environment: Test Against a Production Mirror
 
 ## The purpose of KTestify
 
@@ -48,8 +48,8 @@ flowchart TB
 ```
 
 Key properties of this environment:
-- **Same topology as production** : same topic names, same number of partitions, same schema subjects.
-- **Latest code** : your application is deployed here first, before any release to production.
+- **Same topology as production**: same topic names, same number of partitions, same schema subjects.
+- **Latest code**: your application is deployed here first, before any release to production.
 - **KTestify is the only external consumer** on output topics.
 - **No other team, no other application** writes to the same topics during the test run.
 
@@ -78,7 +78,7 @@ The recommended pattern is a **nightly scheduled pipeline** that:
 ```
 00:00  ──► Clean test environment (topics, statestores)
 00:05  ──► Run KTestify suite
-09:00  ──► ✅ Green : ready to release OR ❌ Red : regression found, notify team
+09:00  ──► ✅ Green: ready to release OR ❌ Red: regression found, notify team
 ```
 
 This gives you a **daily regression gate**: any breaking change merged yesterday is caught overnight, before it reaches production.
@@ -178,5 +178,5 @@ Before starting a run, ensure:
 ## See also
 
 - [Installation →](installation), pulling the Docker image and CI pipeline examples
-- [Configuration →](../write-tests/configuration), `topic-namespace` and all environment variable overrides
+- [Configuration →](configuration), `topic-namespace` and all environment variable overrides
 - [Timeout tuning →](../write-tests/advanced/timeout-tuning), adjust timeouts for slower environments

@@ -62,14 +62,19 @@ Synchronous transports additionally populate a new `attributes` map on `Consumed
 
 ---
 
+## Why the separation matters
+
+The three layers are connected by exactly one type, `ConsumedRecord<V>`. Because the transport layer only ever emits that type and the assertion layer only ever consumes it, the two are fully decoupled. The practical payoff is threefold:
+
+- **Swap transports without touching assertions.** A new broker is a new `RecordFetcher` (or `RequestResponseClient`) implementation. Every `RecordMatcher` keeps working because it only sees `ConsumedRecord`.
+- **Reuse matchers across transports.** The same `FileRecordMatcher` asserts a Kafka `String` body and an HTTP response body, because both arrive as `ConsumedRecord<String>`.
+- **Stay test-framework agnostic.** `ktestify-cucumber` (or any future adapter) drives the engine through `ConsumerContext` / `ProducerContext` and reads back `ConsumedRecord`. It never imports a broker client.
+
 ## Layer responsibilities
 
 ### Transport - `RecordFetcher<V>`
 
-Knows: Kafka broker, partitions, offsets, deduplication.
-Does NOT know: matchers, files, test frameworks.
-
-The contract is a single interface:
+The transport layer turns a concrete message broker into a stream of `ConsumedRecord<V>`. The contract itself is deliberately tiny, a single `fetch()` method plus `close()`:
 
 ```java
 public interface RecordFetcher<V> extends AutoCloseable {
@@ -78,7 +83,9 @@ public interface RecordFetcher<V> extends AutoCloseable {
 }
 ```
 
-Swapping Kafka for IBM MQ means writing a new `IbmMqRecordFetcher<V>`, nothing else changes.
+`fetch()` blocks until at least one record that passes the configured filters is available, or the read timeout expires. It returns a non-empty, unmodifiable list, or throws `FetchException`.
+
+The only implementation today is `KafkaRecordFetcher`, which knows Kafka brokers, partitions, offsets, and the deduplication registry. Swapping Kafka for IBM MQ means writing a new `IbmMqRecordFetcher<V>` that implements the same interface. Nothing in the layers above changes.
 
 ---
 
@@ -105,16 +112,13 @@ Does NOT know: Kafka internals, comparison algorithms.
 
 ```java
 // AbstractKafkaConsumer.call(), simplified
-var fetcher = new KafkaRecordFetcher(context);
-try {
+try (KafkaRecordFetcher<K, V> fetcher = new KafkaRecordFetcher<>(context)) {
     List<ConsumedRecord<V>> records = fetcher.fetch();      // transport
     MatchContext matchCtx = buildMatchContext();
     MatchResult result = matcher.match(records, matchCtx);  // assertion
     return result.isPassed();
 } catch (FetchException e) {
-    throw new ConsumerException(e.getMessage(), e);
-} finally {
-    fetcher.close();
+    throw new ConsumerException(e.getMessage());
 }
 ```
 
@@ -163,8 +167,7 @@ ktestify-core                      ktestify-cucumber
 RecordFetcher<V>                   BackgroundStepDefinition
 RequestResponseClient<Req,V>        ValidationStepDefinition
 KafkaRecordFetcher              ◄──────── ConsumerContext (config only)
-AbstractKafkaConsumer              ConsumerValidationService
-AbstractSynchronousConsumer
+AbstractKafkaConsumer              ConsumerValidationService.** It uses `ConsumerContext` / `ProducerContext` (ktestify-core abstractions) to configure the engine and receives only `ConsumedRecord<V>` back. This is what keeps the Cucumber layer free of broker specifics and lets the same step definitions drive Kafka, HTTP, or any future transport without modification
 PollingRequestResponseClient
 RecordMatcher<V>
 MatchContext / MatchResult

@@ -1,0 +1,249 @@
+---
+sidebar_position: 1
+title: HTTP Plugin
+description: ktestify-plugin-http, send synchronous HTTP requests and assert responses as part of your test scenarios.
+---
+
+# HTTP Plugin
+
+`ktestify-plugin-http` is a first-party KTestify plugin that adds a synchronous HTTP transport to your test scenarios. It lets you send HTTP requests and assert on the response status, body, and headers, including polling until an expected status is returned.
+
+The plugin implements the `RequestResponseClient<Req, V>` contract from `ktestify-core`. Unlike the Kafka and Azure Blob transports, which block until a record appears, the HTTP transport sends a request right now and returns the answer immediately.
+
+:::caution[Work in progress]
+This plugin is actively being developed. The API surface, step definitions, and configuration keys may evolve before the first stable release.
+:::
+
+---
+
+## When to Use
+
+Use the HTTP plugin when your system,
+
+- Exposes a synchronous REST API that you want to call from a scenario
+- Needs request and response assertions on status, body, or headers
+- Requires polling a endpoint until it returns an expected status
+- Combines HTTP calls with Kafka produce and consume steps in one flow
+
+---
+
+## Installation
+
+### Maven Dependency
+
+```xml
+<dependency>
+    <groupId>io.github.ktestify</groupId>
+    <artifactId>ktestify-plugin-http</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <scope>test</scope>
+</dependency>
+```
+
+### With ktestify-cucumber (Docker)
+
+The HTTP plugin is a first-party plugin and is bundled in the `ktestify-cucumber` fat JAR. No additional installation is required.
+
+---
+
+## Configuration
+
+The plugin reads settings from `ktestify.plugins.http` in your HOCON configuration file. Place your configuration in `application.conf` or override via environment variables.
+
+### Configuration Keys
+
+```hocon
+ktestify.plugins.http {
+  connect-timeout   = 10s
+  read-timeout      = 30s
+  poll-interval     = 500ms
+  follow-redirects  = true
+  tls {
+    trust-all = false
+  }
+}
+```
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `connect-timeout` | duration | `10s` | Maximum time to establish a connection |
+| `read-timeout` | duration | `30s` | Maximum time to read a response |
+| `poll-interval` | duration | `500ms` | Delay between polling attempts |
+| `follow-redirects` | boolean | `true` | Whether to follow HTTP redirects |
+| `tls.trust-all` | boolean | `false` | Trust all TLS certificates (disable verification) |
+
+---
+
+## Background Steps
+
+### `Given HTTP endpoint`
+
+Declares a single HTTP endpoint with a base URL.
+
+```gherkin
+Given HTTP endpoint
+  | endpointAlias | baseUrl                    |
+  | orders-api    | http://localhost:8080/api  |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `endpointAlias` | `string` | yes | - | Alias referenced by request steps |
+| `baseUrl` | `string` | yes | - | Base URL for the endpoint |
+
+### `Given HTTP endpoints`
+
+Declares multiple HTTP endpoints at once.
+
+```gherkin
+Given HTTP endpoints
+  | endpointAlias | baseUrl                    |
+  | orders-api    | http://localhost:8080/api  |
+  | users-api     | http://localhost:8081      |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `endpointAlias` | `string` | yes | - | Alias referenced by request steps |
+| `baseUrl` | `string` | yes | - | Base URL for the endpoint |
+
+### `Given HTTP bearer token`
+
+Attaches a bearer token to requests sent to an endpoint.
+
+```gherkin
+Given HTTP bearer token
+  | endpointAlias | token              |
+  | orders-api    | {{ENV:API_TOKEN}}  |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `endpointAlias` | `string` | yes | - | Endpoint the token applies to |
+| `token` | `string` | yes | - | Bearer token value, supports dynamic variables |
+
+### `Given HTTP assets directory`
+
+Declares the base directory for request and expected response files.
+
+```gherkin
+Given HTTP assets directory
+  | absolutePath              |
+  | ./src/test/resources/data |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `absolutePath` | `string` | yes | - | Absolute or relative path to asset files |
+
+---
+
+## Action Steps
+
+### `When HTTP request is sent`
+
+Sends an HTTP request and stores the response under an alias for later assertions.
+
+```gherkin
+When HTTP request is sent
+  | endpointAlias | method | path             | file        | responseAlias |
+  | orders-api    | POST   | /orders/validate | order.json  | validate-resp |
+
+When HTTP request is sent
+  | endpointAlias | method | path         | queryParams | responseAlias |
+  | orders-api    | GET    | /orders/{id} | id=ORD-001  | fetch-resp    |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `endpointAlias` | `string` | yes | - | Endpoint to send the request to |
+| `method` | `string` | yes | - | HTTP method (GET, POST, PUT, DELETE, ...) |
+| `path` | `string` | yes | - | Path appended to the base URL, supports `{placeholder}` substitution |
+| `file` | `string` | no | - | Request body file, resolved against the assets directory |
+| `queryParams` | `string` | no | - | Query parameters as `key=value` pairs, comma separated |
+| `responseAlias` | `string` | yes | - | Alias used to reference the response in assertions |
+
+---
+
+## Validation Steps
+
+### `Then expected HTTP response status`
+
+Asserts the HTTP status code of a stored response.
+
+```gherkin
+Then expected HTTP response status
+  | responseAlias | statusCode |
+  | validate-resp | 200        |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `responseAlias` | `string` | yes | - | Response to assert |
+| `statusCode` | `int` | yes | - | Expected HTTP status code |
+
+### `Then expected HTTP response body from file`
+
+Asserts the response body against a file, with optional excluded keys.
+
+```gherkin
+Then expected HTTP response body from file
+  | responseAlias | file          | excludedKeys |
+  | validate-resp | expected.json | timestamp,id |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `responseAlias` | `string` | yes | - | Response to assert |
+| `file` | `string` | yes | - | Expected body file |
+| `excludedKeys` | `string` | no | - | Comma separated keys to ignore during comparison |
+
+### `Then expected HTTP response XML body from file`
+
+Asserts an XML response body against a file, with optional excluded elements.
+
+```gherkin
+Then expected HTTP response XML body from file
+  | responseAlias | file         | excludedElements    |
+  | validate-resp | expected.xml | ns:CreationDateTime |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `responseAlias` | `string` | yes | - | Response to assert |
+| `file` | `string` | yes | - | Expected XML body file |
+| `excludedElements` | `string` | no | - | Comma separated elements to ignore during comparison |
+
+### `And HTTP response header should match`
+
+Asserts a response header value.
+
+```gherkin
+And HTTP response header should match
+  | responseAlias | header       | value            |
+  | validate-resp | Content-Type | application/json |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `responseAlias` | `string` | yes | - | Response to assert |
+| `header` | `string` | yes | - | Header name |
+| `value` | `string` | yes | - | Expected header value |
+
+### `Then HTTP endpoint should eventually return`
+
+Polls an endpoint until it returns an expected status or the read timeout elapses.
+
+```gherkin
+Then HTTP endpoint should eventually return
+  | endpointAlias | method | path                    | expectedStatus | readTimeout |
+  | orders-api    | GET    | /orders/ORD-001/status  | 200            | 30          |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `endpointAlias` | `string` | yes | - | Endpoint to poll |
+| `method` | `string` | yes | - | HTTP method |
+| `path` | `string` | yes | - | Path appended to the base URL |
+| `expectedStatus` | `int` | yes | - | Status code to wait for |
+| `readTimeout` | `int` | yes | - | Maximum seconds to keep polling |

@@ -4,7 +4,7 @@ title: Watcher (Presence / Absence)
 description: Assert that a record appears or does not appear on an output topic within the timeout window.
 ---
 
-# Watcher : `And record should (not) appear in topic`
+# Watcher: `And record should (not) appear in topic`
 
 The watcher steps don't compare record content, they simply verify that **at least one record** (optionally matching a key) does or does not appear on a topic within the read timeout window.
 
@@ -39,19 +39,19 @@ Passes only if **no** record appears within `consumerReadTimeout` seconds. Use t
 | Column | Type | Required | Description |
 |---|---|---|---|
 | `topicAlias` | `string` | ✅ | Alias of a declared output topic |
-| `topicType` | `string` | ✅ | `raw` or `avro` — determines deserialiser |
+| `topicType` | `string` | ✅ | `raw` or `avro`, determines the deserialiser |
 | `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait (or confirm absence) |
 | `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
 
 :::tip[Choosing the right timeout for negative assertions]
-For `should not appear`, set `consumerReadTimeout` to a value that is long enough to be confident nothing will arrive, but short enough to not slow your suite down unnecessarily. 5–10 seconds is usually a good starting point.
+For `should not appear`, set `consumerReadTimeout` to a value that is long enough to be confident nothing will arrive, but short enough to not slow your suite down unnecessarily. A value between 5 and 10 seconds is usually a good starting point.
 :::
 
 ---
 
 ## Multiple rows, same topic
 
-Both watcher steps support multiple rows — useful for checking presence/absence of several distinct keys on the same topic in one step. Rows are validated sequentially, in order, and share one pinned `referenceTimestamp` so their seek windows don't drift. Every row must target the **same physical topic**; mixing topics throws `TopicMismatchException` before any consumer call is made:
+Both watcher steps support multiple rows, which is useful for checking presence or absence of several distinct keys on the same topic in one step. Rows are validated sequentially, in order, and share one pinned `referenceTimestamp` so their seek windows don't drift. Every row must target the **same physical topic**. Mixing topics throws `TopicMismatchException` before any consumer call is made:
 
 ```gherkin
 And record should not appear in topic
@@ -64,7 +64,7 @@ See [Multi-row DataTables](../advanced/multi-row-datatables) for the full rules.
 
 ---
 
-## Example : filtering scenario
+## Example: filtering scenario
 
 ```gherkin
 Scenario: Invalid orders are filtered out

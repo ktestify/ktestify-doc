@@ -4,112 +4,119 @@ const sidebars: SidebarsConfig = {
   docsSidebar: [
     'intro',
 
-    // ── Getting Started ──────────────────────────────────────────────────────
+    // Tutorials (learning-oriented)
     {
       type: 'category',
-      label: 'Getting Started',
-      link: {type: 'generated-index', description: 'Everything you need to run your first KTestify test.'},
+      label: 'Tutorials',
+      link: {type: 'generated-index', description: 'Get KTestify running and write your first test, step by step.'},
       items: [
         'getting-started/installation',
-        'getting-started/quick-start',
         'getting-started/ci-environment',
-        'getting-started/configuration',
+        'getting-started/quick-start',
       ],
     },
 
-    // ── Write Tests (QA / Test-Engineer track) ───────────────────────────────
+    // How-to Guides (task-oriented)
     {
       type: 'category',
-      label: '‍🧪 Write Tests',
-      link: {type: 'doc', id: 'write-tests/overview'},
+      label: 'How-to Guides',
+      link: {type: 'generated-index', description: 'Task recipes: write steps, use plugins, extend the framework.'},
       items: [
         'write-tests/overview',
-        'write-tests/configuration',
         {
           type: 'category',
-          label: 'Background — Given',
-          link: {type: 'generated-index', description: 'Declare topics, namespaces, schemas, and directories for your scenario.'},
+          label: 'Write Kafka tests',
           items: [
-            'write-tests/background/namespaces',
-            'write-tests/background/topics',
-            'write-tests/background/assets-directory',
-            'write-tests/background/schemas',
+            {
+              type: 'category',
+              label: 'Background (Given)',
+              items: [
+                'write-tests/background/namespaces',
+                'write-tests/background/topics',
+                'write-tests/background/assets-directory',
+                'write-tests/background/schemas',
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Actions (When)',
+              items: [
+                'write-tests/actions/send-raw-record',
+                'write-tests/actions/send-avro-record',
+                'write-tests/actions/wait-and-script',
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Assertions (Then)',
+              items: [
+                'write-tests/assertions/raw-matchers',
+                'write-tests/assertions/xml-matchers',
+                'write-tests/assertions/avro-matchers',
+                'write-tests/assertions/batch-assertions',
+                'write-tests/assertions/watcher',
+              ],
+            },
+            'write-tests/dynamic-variables',
+            {
+              type: 'category',
+              label: 'Advanced patterns',
+              items: [
+                'write-tests/advanced/timeout-tuning',
+                'write-tests/advanced/batch-testing',
+                'write-tests/advanced/multi-row-datatables',
+              ],
+            },
           ],
         },
         {
           type: 'category',
-          label: 'Actions — When',
-          link: {type: 'generated-index', description: 'Produce messages, send files, trigger scripts.'},
+          label: 'Use plugins',
           items: [
-            'write-tests/actions/send-raw-record',
-            'write-tests/actions/send-avro-record',
-            'write-tests/actions/wait-and-script',
+            'extend/plugins/http',
+            'extend/plugins/azureblob',
+            'extend/plugins/notifications',
           ],
         },
         {
           type: 'category',
-          label: 'Assertions — Then',
-          link: {type: 'generated-index', description: 'Consume and assert output records.'},
+          label: 'Extend the framework',
           items: [
-            'write-tests/assertions/raw-matchers',
-            'write-tests/assertions/xml-matchers',
-            'write-tests/assertions/avro-matchers',
-            'write-tests/assertions/batch-assertions',
-            'write-tests/assertions/watcher',
+            'extend/transports/adding-a-transport',
+            'extend/matchers/custom-matcher',
+            'extend/plugins/create-plugin',
           ],
         },
-        'write-tests/dynamic-variables',
-        {
-          type: 'category',
-          label: 'Advanced',
-          link: {type: 'generated-index', description: 'Batch mode, timeout tuning, and roundtrip test patterns.'},
-          items: [
-            'write-tests/advanced/timeout-tuning',
-            'write-tests/advanced/batch-testing',
-            'write-tests/advanced/multi-row-datatables',
-          ],
-        },
-        'write-tests/step-reference',
       ],
     },
 
-    // ── Extend (Java-Developer track) ────────────────────────────────────────
+    // Reference (information-oriented)
     {
       type: 'category',
-      label: '🔧 Extend the Framework',
-      link: {type: 'doc', id: 'extend/architecture'},
+      label: 'Reference',
+      link: {type: 'generated-index', description: 'Lookup tables: every step, config key, matcher, and plugin.'},
+      items: [
+        'write-tests/step-reference',
+        'getting-started/configuration',
+        'extend/matchers/built-in-matchers',
+        'extend/plugins/index',
+      ],
+    },
+
+    // Explanation (understanding-oriented)
+    {
+      type: 'category',
+      label: 'Explanation',
+      link: {type: 'generated-index', description: 'Why KTestify is built the way it is: architecture and core concepts.'},
       items: [
         'extend/architecture',
         'extend/core-concepts',
         {
           type: 'category',
           label: 'Transports',
-          link: {type: 'generated-index', description: 'How KTestify fetches records and how to add a new transport.'},
           items: [
             'extend/transports/kafka',
-            'extend/transports/adding-a-transport',
             'extend/transports/synchronous-transports',
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Matchers',
-          link: {type: 'generated-index', description: 'Built-in assertion strategies and how to write your own.'},
-          items: [
-            'extend/matchers/built-in-matchers',
-            'extend/matchers/custom-matcher',
-          ],
-        },
-        {
-          type: 'category',
-          label: 'Plugins',
-          link: {type: 'doc', id: 'extend/plugins/index'},
-          items: [
-            'extend/plugins/index',
-            'extend/plugins/plugin-system',
-            'extend/plugins/create-plugin',
-            'extend/plugins/azureblob',
-            'extend/plugins/notifications'
           ],
         },
       ],
