@@ -305,17 +305,33 @@ Then expected record from file based on schema
 
 Assert specific Avro field values without a file.
 
+**Single field** (use `key` / `value` columns):
+
 ```gherkin
 Then expected record based on schema should have fields matching from given value
   | topicAlias | key    | value     |
   | orders-out | status | PROCESSED |
 ```
 
+**Multiple fields** (use `keys` / `values` columns, semicolon-separated):
+
+```gherkin
+Then expected record based on schema should have fields matching from given value
+  | topicAlias | keys          | values      |
+  | orders-out | status;amount | PENDING;99 |
+```
+
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `topicAlias` | `string` | ✅ | none | Output topic alias |
-| `key` | `string` | ✅ | none | Avro field name |
-| `value` | `string` | ✅ | none | Expected field value |
+| `key` | `string` | ❌* | none | Avro field name (single-field mode) |
+| `value` | `string` | ❌* | none | Expected field value (single-field mode) |
+| `keys` | `string` | ❌* | none | Semicolon-separated Avro field names (multi-field mode) |
+| `values` | `string` | ❌* | none | Semicolon-separated expected values (multi-field mode) |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+\* Either `key` + `value` or `keys` + `values` must be provided.
 
 ---
 

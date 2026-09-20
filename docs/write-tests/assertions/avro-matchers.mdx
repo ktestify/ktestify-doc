@@ -47,17 +47,41 @@ Then expected record with key and value from file based on schema
 
 Asserts one or more specific Avro field values without a file.
 
+### Single field
+
+Use the `key` / `value` columns to assert a single field:
+
 ```gherkin
 Then expected record based on schema should have fields matching from given value
   | topicAlias | key       | value     |
   | orders-out | status    | PROCESSED |
 ```
 
+### Multiple fields
+
+Use the `keys` / `values` columns to assert multiple fields in a single step. Separate field names and expected values
+with semicolons (`;`). Every pair must match for the assertion to pass.
+
+```gherkin
+Then expected record based on schema should have fields matching from given value
+  | topicAlias | keys          | values      |
+  | orders-out | status;amount | PENDING;99 |
+```
+
+The above validates that `status == PENDING` **and** `amount == 99`.
+
 | Column | Type | Required | Description |
 |---|---|---|---|
 | `topicAlias` | `string` | ✅ | Alias of a declared output topic |
-| `key` | `string` | ✅ | Avro field name |
-| `value` | `string` | ✅ | Expected field value (string-compared after JSON serialisation) |
+| `key` | `string` | ❌* | Avro field name (single-field mode) |
+| `value` | `string` | ❌* | Expected field value (single-field mode) |
+| `keys` | `string` | ❌* | Semicolon-separated Avro field names (multi-field mode) |
+| `values` | `string` | ❌* | Semicolon-separated expected values (multi-field mode) |
+| `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait for a record |
+| `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
+
+\* Either `key` + `value` (single field) **or** `keys` + `values` (multiple fields) must be provided. The two modes
+are mutually exclusive.
 
 ---
 
@@ -99,4 +123,3 @@ All rows share one pinned `referenceTimestamp` so their delta-time seek windows 
 - [Schemas background step →](../background/schemas)
 - [Configuration →](../configuration)
 - [Multi-row DataTables →](../advanced/multi-row-datatables)
-
