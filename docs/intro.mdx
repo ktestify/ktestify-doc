@@ -1,16 +1,16 @@
 ---
 sidebar_position: 1
 title: Introduction
-description: KTestify, modular, open-source Kafka Streams integration testing framework with a Gherkin DSL.
+description: KTestify, a modular, open-source Kafka integration testing framework with a Gherkin DSL.
 ---
 
 # What is KTestify?
 
-**KTestify** is a modular, open-source framework for integration-testing Kafka/Kafka Streams data pipelines.
+**KTestify** is a modular, open-source framework for integration-testing Kafka and Kafka Streams data pipelines.
 
-At its core sits a transport-agnostic engine that separates concerns cleanly into three layers, **Transport**, **Orchestration**, and **Assertion**.
+At its core sits a transport-agnostic engine that separates concerns cleanly into three layers: **Transport**, **Orchestration**, and **Assertion**.
 
-Today, a **Cucumber/Gherkin adapter** (`ktestify-cucumber`) lets teams write plain-English test scenarios that produce messages, consume from output topics, and assert record content without touching a single line of Kafka client code. Other tests engines such as Playwright or RobotFramework are planned in the future.
+A **Cucumber/Gherkin adapter** (`ktestify-cucumber`) lets teams write plain-English test scenarios that produce messages, consume from output topics, and assert record content without touching a single line of Kafka client code.
 
 ```gherkin
 Feature: Order stream validation
@@ -35,20 +35,22 @@ Feature: Order stream validation
       | enriched   | order-enriched-output.json |
 ```
 
-But KTestify does not stop at Kafka clients and Gherkin steps. Its modular architecture allows you to extend the framework with custom transports, matchers thanks to plugins.
+KTestify does not stop at Kafka clients and Gherkin steps. Its modular architecture lets you extend the framework with custom transports and matchers through plugins.
 
-For example, there is an Azure Blob Storage plugin available to lets you interact with the Azure Blob Storage to check that your Sink/Source Kafka connectors are working as expected.
+For example, the Azure Blob Storage plugin lets you interact with Azure Blob Storage to check that your Sink or Source Kafka connectors are working as expected. The HTTP plugin lets you test synchronous request and response flows.
 
 ---
 
-## Two tracks, one framework
+## How this documentation is organized
 
-KTestify's documentation is split into two reader tracks:
+The documentation follows four purpose-based sections. Pick the one that matches what you are trying to do, not who you are.
 
-| Track | Who is it for? | Where to start |
+| Section | What it is for | Start here |
 |---|---|---|
-| **‍🧪 Write Tests** | QA engineers & test authors who want to write Gherkin scenarios | [Getting Started →](getting-started/installation) |
-| **🔧 Extend the Framework** | Java developers who want to add transports, matchers, or plugins | [Architecture →](extend/architecture) |
+| **Tutorials** | Learning-oriented walkthroughs that take you from zero to a running test | [Installation](getting-started/installation) |
+| **How-to Guides** | Task recipes for writing steps, using plugins, and extending the framework | [Writing tests overview](write-tests/overview) |
+| **Reference** | Lookup tables: every step, config key, matcher, and plugin | [Step reference](write-tests/step-reference) |
+| **Explanation** | Understanding-oriented material on architecture and core concepts | [Architecture](extend/architecture) |
 
 ---
 
@@ -58,14 +60,16 @@ KTestify's documentation is split into two reader tracks:
 |---|---|
 | [`ktestify-core`](https://github.com/ktestify/ktestify-core) | Transport-agnostic library, Kafka clients, matchers, config, models |
 | [`ktestify-cucumber`](https://github.com/ktestify/ktestify-cucumber) | Standalone Cucumber/Gherkin application, step definitions, hooks, services |
-| [`ktestify-plugin-azureblob`](https://github.com/ktestify/ktestify-plugin-azureblob) | Azure Blob Storage plugin _(in progress)_ |
+| [`ktestify-plugin-azureblob`](https://github.com/ktestify/ktestify-plugin-azureblob) | Azure Blob Storage plugin for validating connector output |
+| [`ktestify-plugin-http`](https://github.com/ktestify/ktestify-plugin-http) | HTTP request and response transport plugin |
+| [`ktestify-plugin-notifications`](https://github.com/ktestify/ktestify-plugin-notifications) | Suite-level notification plugin for Teams, Slack, and webhooks |
 
 ---
 
 ## Quick links
 
-- 🚀 **[Install & run](getting-started/installation)**, Docker image or standalone JAR
-- ⚠️ **[CI environment requirements](getting-started/ci-environment)**, dedicated Kafka stack is mandatory
-- 📖 **[Full step reference](write-tests/step-reference)**
-- 🔧 **[Architecture deep-dive](extend/architecture)**
-- 📋 **[CHANGELOG](https://github.com/ktestify/ktestify-core/blob/main/CHANGELOG.md)**
+- Install and run, Docker image or standalone JAR: [Tutorials](getting-started/installation)
+- CI environment requirements, a dedicated Kafka stack is mandatory: [CI environment](getting-started/ci-environment)
+- Full step reference: [Step reference](write-tests/step-reference)
+- Architecture deep-dive: [Explanation](extend/architecture)
+- CHANGELOG: [ktestify-core](https://github.com/ktestify/ktestify-core/blob/main/CHANGELOG.md)

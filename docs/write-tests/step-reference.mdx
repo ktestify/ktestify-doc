@@ -10,7 +10,7 @@ Complete catalogue of every KTestify step. All DataTable columns are listed with
 
 ---
 
-## Background : `Given` steps
+## Background: `Given` steps
 
 ### `Given namespace`
 
@@ -24,7 +24,7 @@ Given namespace
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `namespace` | `string` | ✅ | — | Namespace prefix (e.g. `myapp`, `com.example`) |
+| `namespace` | `string` | ✅ | none | Namespace prefix (e.g. `myapp`, `com.example`) |
 
 ---
 
@@ -41,8 +41,8 @@ Given namespaces
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `namespace` | `string` | ✅ | — | Namespace prefix |
-| `namespaceAlias` | `string` | ✅ | — | Alias referenced in topic declarations |
+| `namespace` | `string` | ✅ | none | Namespace prefix |
+| `namespaceAlias` | `string` | ✅ | none | Alias referenced in topic declarations |
 
 ---
 
@@ -58,10 +58,10 @@ Given input topic
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicName` | `string` | ✅ | — | Physical topic name (namespace prepended) |
-| `topicAlias` | `string` | ✅ | — | Alias for use in `When` steps |
+| `topicName` | `string` | ✅ | none | Physical topic name (namespace prepended) |
+| `topicAlias` | `string` | ✅ | none | Alias for use in `When` steps |
 | `namespace` | `string` | ❌ | Config default | Override namespace for this topic |
-| `namespaceAlias` | `string` | ❌ | — | Reference a `Given namespaces` alias |
+| `namespaceAlias` | `string` | ❌ | none | Reference a `Given namespaces` alias |
 
 ---
 
@@ -77,10 +77,10 @@ Given output topic
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicName` | `string` | ✅ | — | Physical topic name (namespace prepended) |
-| `topicAlias` | `string` | ✅ | — | Alias for use in `Then` steps |
+| `topicName` | `string` | ✅ | none | Physical topic name (namespace prepended) |
+| `topicAlias` | `string` | ✅ | none | Alias for use in `Then` steps |
 | `namespace` | `string` | ❌ | Config default | Override namespace for this topic |
-| `namespaceAlias` | `string` | ❌ | — | Reference a `Given namespaces` alias |
+| `namespaceAlias` | `string` | ❌ | none | Reference a `Given namespaces` alias |
 
 ---
 
@@ -112,13 +112,13 @@ Given schema
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `schemaName` | `string` | ✅ | — | Schema Registry subject name (prefix for `schemaName-value`) |
-| `schemaAlias` | `string` | ✅ | — | Short alias |
+| `schemaName` | `string` | ✅ | none | Schema Registry subject name (prefix for `schemaName-value`) |
+| `schemaAlias` | `string` | ✅ | none | Short alias |
 | `schemaVersion` | `integer` | ❌ | latest | Schema version to use |
 
 ---
 
-## Actions — `When` steps
+## Actions: `When` steps
 
 :::info[Multi-row DataTables]
 Producer and script steps below accept multiple DataTable rows, executed sequentially in order. Producer steps additionally require every row to resolve to the **same physical topic** (`TopicMismatchException` otherwise). See [Multi-row DataTables](advanced/multi-row-datatables) for full details.
@@ -136,10 +136,10 @@ When record from file is sent
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicName` | `string` | ✅ | — | Topic name or alias (must be declared as INPUT) |
-| `file` | `string` | ✅ | — | Payload file, relative to assets directory |
+| `topicName` | `string` | ✅ | none | Topic name or alias (must be declared as INPUT) |
+| `file` | `string` | ✅ | none | Payload file, relative to assets directory |
 | `recordKey` | `string` | ❌ | `null` | Kafka record key |
-| `headerFile` | `string` | ❌ | — | JSON file of Kafka headers `{"name":"value"}` |
+| `headerFile` | `string` | ❌ | none | JSON file of Kafka headers `{"name":"value"}` |
 
 ---
 
@@ -155,8 +155,8 @@ When record from file based on schema is sent
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicName` | `string` | ✅ | — | Input topic name or alias |
-| `file` | `string` | ✅ | — | JSON payload file |
+| `topicName` | `string` | ✅ | none | Input topic name or alias |
+| `file` | `string` | ✅ | none | JSON payload file |
 | `schemaName` | `string` | ❌ | TopicNameStrategy | Schema alias or name declared via `Given schema` |
 | `recordKey` | `string` | ❌ | `null` | Kafka record key |
 
@@ -188,14 +188,14 @@ When script is executed
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `scriptPath` | `string` | ✅ | — | Path to the script file |
-| `scriptArgs` | `string` | ❌ | — | Comma-separated arguments |
+| `scriptPath` | `string` | ✅ | none | Path to the script file |
+| `scriptArgs` | `string` | ❌ | none | Comma-separated arguments |
 
 Fails if exit code ≠ 0.
 
 ---
 
-## Assertions : `Then` / `And` steps
+## Assertions: `Then` / `And` steps
 
 :::info[Multi-row DataTables]
 Every single-record assertion step below (all except the two batch steps) accepts multiple DataTable rows, validated sequentially in order, **provided every row targets the same physical topic** (`TopicMismatchException` otherwise). All rows in the same step share one pinned `referenceTimestamp` so delta-time seek windows don't drift row-to-row. The batch steps (`expected records from files` / `...based on schema`) remain strictly single-row. See [Multi-row DataTables →](advanced/multi-row-datatables) for full details.
@@ -213,9 +213,9 @@ Then expected record from file
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `file` | `string` | ✅ | — | Expected file path |
-| `expectedRecordKey` | `string` | ❌ | — | Filter by record key |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `file` | `string` | ✅ | none | Expected file path |
+| `expectedRecordKey` | `string` | ❌ | none | Filter by record key |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -233,11 +233,11 @@ Then expected record should have fields matching from file
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `file` | `string` | ✅ | — | Expected file |
-| `line` | `integer` | ✅ | — | 1-based line number |
-| `from` | `integer` | ✅ | — | Start char index (inclusive) |
-| `to` | `integer` | ✅ | — | End char index (exclusive) |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `file` | `string` | ✅ | none | Expected file |
+| `line` | `integer` | ✅ | none | 1-based line number |
+| `from` | `integer` | ✅ | none | Start char index (inclusive) |
+| `to` | `integer` | ✅ | none | End char index (exclusive) |
 
 ---
 
@@ -253,10 +253,10 @@ Then expected record from file based on XML
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `file` | `string` | ✅ | — | Expected XML file |
-| `excludedElements` | `string` | ❌ | — | Comma-separated element names to skip |
-| `expectedRecordKey` | `string` | ❌ | — | Filter by record key |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `file` | `string` | ✅ | none | Expected XML file |
+| `excludedElements` | `string` | ❌ | none | Comma-separated element names to skip |
+| `expectedRecordKey` | `string` | ❌ | none | Filter by record key |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -274,9 +274,9 @@ Then expected record based on XML should have fields matching from file
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `file` | `string` | ✅ | — | Expected values file (one per line) |
-| `xpathExpressions` | `string` | ✅ | — | Comma-separated XPath expressions |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `file` | `string` | ✅ | none | Expected values file (one per line) |
+| `xpathExpressions` | `string` | ✅ | none | Comma-separated XPath expressions |
 
 ---
 
@@ -292,10 +292,10 @@ Then expected record from file based on schema
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `file` | `string` | ✅ | — | Expected JSON file |
-| `excludedKeys` | `string` | ❌ | — | Comma-separated Avro field names to exclude |
-| `expectedRecordKey` | `string` | ❌ | — | Filter by record key |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `file` | `string` | ✅ | none | Expected JSON file |
+| `excludedKeys` | `string` | ❌ | none | Comma-separated Avro field names to exclude |
+| `expectedRecordKey` | `string` | ❌ | none | Filter by record key |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -305,17 +305,33 @@ Then expected record from file based on schema
 
 Assert specific Avro field values without a file.
 
+**Single field** (use `key` / `value` columns):
+
 ```gherkin
 Then expected record based on schema should have fields matching from given value
   | topicAlias | key    | value     |
   | orders-out | status | PROCESSED |
 ```
 
+**Multiple fields** (use `keys` / `values` columns, semicolon-separated):
+
+```gherkin
+Then expected record based on schema should have fields matching from given value
+  | topicAlias | keys          | values      |
+  | orders-out | status;amount | PENDING;99 |
+```
+
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `key` | `string` | ✅ | — | Avro field name |
-| `value` | `string` | ✅ | — | Expected field value |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `key` | `string` | ❌* | none | Avro field name (single-field mode) |
+| `value` | `string` | ❌* | none | Expected field value (single-field mode) |
+| `keys` | `string` | ❌* | none | Semicolon-separated Avro field names (multi-field mode) |
+| `values` | `string` | ❌* | none | Semicolon-separated expected values (multi-field mode) |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+\* Either `key` + `value` or `keys` + `values` must be provided.
 
 ---
 
@@ -331,9 +347,9 @@ Then expected records from files
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `expectedRecordsCount` | `integer` | ✅ | — | Exact number of records to collect |
-| `files` | `string` | ✅ | — | Comma-separated expected file paths |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `expectedRecordsCount` | `integer` | ✅ | none | Exact number of records to collect |
+| `files` | `string` | ✅ | none | Comma-separated expected file paths |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait for all records |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -351,10 +367,10 @@ Then expected records from files based on schema
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `expectedRecordsCount` | `integer` | ✅ | — | Exact number of records to collect |
-| `files` | `string` | ✅ | — | Comma-separated expected JSON file paths |
-| `excludedKeys` | `string` | ❌ | — | Avro field names to exclude from all records |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `expectedRecordsCount` | `integer` | ✅ | none | Exact number of records to collect |
+| `files` | `string` | ✅ | none | Comma-separated expected JSON file paths |
+| `excludedKeys` | `string` | ❌ | none | Avro field names to exclude from all records |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait for all records |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -372,8 +388,8 @@ And record should appear in topic
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `topicAlias` | `string` | ✅ | — | Output topic alias |
-| `topicType` | `string` | ✅ | — | `raw` or `avro` |
+| `topicAlias` | `string` | ✅ | none | Output topic alias |
+| `topicType` | `string` | ✅ | none | `raw` or `avro` |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 

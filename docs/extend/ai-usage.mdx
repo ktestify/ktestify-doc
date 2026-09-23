@@ -1,0 +1,47 @@
+---
+sidebar_position: 5
+title: AI Usage
+description: How artificial intelligence tools are used in the KTestify project.
+---
+
+# AI Usage in KTestify
+
+KTestify uses artificial intelligence (AI) tools to support development. This page explains what AI is used for and the safeguards that keep quality high.
+
+---
+
+## What AI is used for
+
+AI assists with three specific tasks:
+
+| Task | What AI does |
+|---|---|
+| **Code suggestions** | AI suggests individual pieces of code, such as small snippets or method implementations. A developer reviews every suggestion before it is accepted. No agentic or autonomous usage is involved. |
+| **Documentation** | AI helps generate user-facing documentation, including the pages you are reading now. |
+| **Javadoc** | AI helps generate Javadoc comments for Java source files. |
+
+---
+
+## What AI is not used for
+
+- AI does not write code on its own or make changes without human involvement.
+- AI does not run tests, merge pull requests, or make decisions about the codebase.
+- AI is never used in an agentic mode where it acts independently.
+
+---
+
+## Review process
+
+Everything AI generates is reviewed by a developer before it becomes part of the project:
+
+1. **Code suggestions** are read, tested, and adjusted as needed before being committed.
+2. **Documentation** is checked for accuracy and clarity.
+3. **Javadoc** is verified to make sure it correctly describes the behaviour of the code.
+
+If an AI-generated contribution is inaccurate or incomplete, it is corrected or discarded. No content is accepted without human review.
+
+---
+
+## Summary
+
+AI is a supporting tool in KTestify, not an autonomous contributor. It helps with code suggestions, documentation, and Javadoc, and every output is reviewed before it is used.

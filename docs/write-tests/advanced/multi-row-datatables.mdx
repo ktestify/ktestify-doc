@@ -17,11 +17,11 @@ Most KTestify steps accept a Cucumber `DataTable` with **more than one data row*
 | Producer (`When record from file is sent`, `...based on schema is sent`) | ✅ Yes | ✅ Yes | Rows sent sequentially, in order |
 | Script execution (`When script is executed`, `And execute script`) | ✅ Yes | N/A | Rows run sequentially, fail-fast on first non-zero exit |
 | Single-record assertions (`Then expected record from file`, XML/XPath, Avro file/field match, key-only, key+value, watchers) | ✅ Yes | ✅ Yes | Rows validated sequentially, in order, sharing one pinned "now" |
-| Batch assertions (`expected records from files`, `...based on schema`) | ❌ Single row only | — | The one row already describes an any-to-all match across N files |
+| Batch assertions (`expected records from files`, `...based on schema`) | ❌ Single row only | none | The one row already describes an any-to-all match across N files |
 
 ---
 
-## Producer steps : always multi-row
+## Producer steps: always multi-row
 
 Producing a Kafka record is a stateless operation, there's no offset/seek math involved, so every row of the DataTable is sent, **in row order**, without restriction other than the same-topic guard rail below.
 
@@ -36,7 +36,7 @@ Both records are produced, in that order, before the step completes.
 
 ---
 
-## Single-record assertion steps : multi-row, same topic only
+## Single-record assertion steps: multi-row, same topic only
 
 Every single-record assertion step (`Then expected record from file`, XML/XPath matchers, Avro file/field match, key-only/key+value assertions, and the `record should (not) appear in topic` watchers) drives **one Kafka consumer call per row**. Supporting arbitrary multi-topic rows here would reopen the offset-skew problem the framework works hard to avoid (see below), so KTestify only allows multiple rows **when they all target the same physical topic**:
 
@@ -62,7 +62,7 @@ To avoid this, KTestify captures `System.currentTimeMillis()` **once**, at the t
 Both producer steps and single-record assertion steps resolve the topic of every DataTable row and assert they all point to the **same physical topic** (namespaced topic name + type) before doing anything else, no partial sends, no partial validation.
 
 ```gherkin
-# ❌ This throws immediately — mixed topics in one DataTable
+# ❌ This throws immediately, mixed topics in one DataTable
 When record from file is sent
   | topicName  | file           | recordKey |
   | orders-in  | order-001.json | order-001 |
@@ -89,7 +89,7 @@ When record from file is sent
 
 ---
 
-## Batch assertion steps : still single-row only
+## Batch assertion steps: still single-row only
 
 `expected records from files` and `expected records from files based on schema` remain **strictly single-row**. Their one row already describes an any-to-all match across `expectedRecordsCount` records collected from a single consumer call, adding more DataTable rows on top of that would be ambiguous (multiple independent batches? one bigger batch?) so KTestify rejects it loudly instead of guessing:
 
