@@ -92,23 +92,17 @@ import TabItem from '@theme/TabItem';
 ```yaml title=".gitlab-ci.yml"
 regression-tests:
   stage: test
-  image: docker:27
-  services:
-    - docker:27-dind
+  image: ghcr.io/ktestify/ktestify-cucumber:latest
+  variables:
+    KTESTIFY_CONFIG_FILE: $CI_PROJECT_DIR/.config/ktestify.conf
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
   script:
-    - docker run --rm
-        -v "$CI_PROJECT_DIR/workspace/features:/workspace/features"
-        -v "$CI_PROJECT_DIR/workspace/reports:/workspace/reports"
-        -e KTESTIFY_BOOTSTRAP_SERVERS="$TEST_KAFKA_BROKERS"
-        -e KTESTIFY_TOPIC_NAMESPACE="$KTESTIFY_TOPIC_NAMESPACE"
-        ghcr.io/ktestify/ktestify-cucumber:latest
-        /workspace/features
+    - java -cp @/app/jib-classpath-file @/app/jib-main-class-file
   artifacts:
     when: always
     paths:
-      - workspace/reports/
+      - $CI_PROJECT_DIR/workspace/reports
 ```
 
 Create a schedule in **CI/CD → Schedules** pointing at `main`, set to run nightly.
