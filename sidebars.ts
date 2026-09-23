@@ -111,6 +111,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'extend/architecture',
         'extend/core-concepts',
+        'extend/ai-usage',
         {
           type: 'category',
           label: 'Transports',
