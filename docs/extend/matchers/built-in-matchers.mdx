@@ -44,17 +44,17 @@ Compares the record value character-for-character against a file's content after
 
 ### `FileKeyRecordMatcher`
 
-Asserts both the record **key** and **value**. The expected file must contain the key on line 1 and the value from line 2 onwards.
+Asserts both the record **key** and **value**. The expected file must contain the key on line 1 and the value from line 2 onwards. Key matching uses the `KeyMatchStrategy` from `MatchContext` (defaults to `EXACT`).
 
-- **MatchContext fields used:** `matchFilePaths.get(0)`
+- **MatchContext fields used:** `matchFilePaths.get(0)`, `keyMatchStrategy`
 
 ---
 
 ### `KeyRecordMatcher`
 
-Asserts only the record **key**, the value is not evaluated.
+Asserts only the record **key**, the value is not evaluated. Key matching uses the `KeyMatchStrategy` from `MatchContext` (defaults to `EXACT`).
 
-- **MatchContext fields used:** `matchKey` (falls back to `matchFilePaths.get(0)` if blank)
+- **MatchContext fields used:** `matchKey` (falls back to `matchFilePaths.get(0)` if blank), `keyMatchStrategy`
 
 ---
 
@@ -116,13 +116,13 @@ Avro equivalent of `FileRecordMatcher`. Converts `GenericRecord` → JSON string
 
 ### `AvroFileKeyRecordMatcher`
 
-Avro equivalent of `FileKeyRecordMatcher`. Asserts key + Avro-serialised JSON value.
+Avro equivalent of `FileKeyRecordMatcher`. Asserts key + Avro-serialised JSON value. Key matching uses the `KeyMatchStrategy` from `MatchContext` (defaults to `EXACT`).
 
 ---
 
 ### `AvroKeyRecordMatcher`
 
-Avro equivalent of `KeyRecordMatcher`. Key-only assertion; Avro value ignored.
+Avro equivalent of `KeyRecordMatcher`. Key-only assertion; Avro value ignored. Key matching uses the `KeyMatchStrategy` from `MatchContext` (defaults to `EXACT`).
 
 ---
 
@@ -139,4 +139,4 @@ Avro equivalent of `FieldsRecordMatcher`. Extracts a character range from the JS
 3. XML/XPath matchers throw `ConsumerException` when called via `RecordMatcherFactory.forAvro()`.
 4. `NoOpRecordMatcher` is the default when no match method is configured.
 5. `expectedAttributes` defaults to `Collections.emptyMap()`, `AttributeRecordMatcher` checks `isEmpty()`, never `null`, same convention as `excludedFields`.
-
+6. `keyMatchStrategy` defaults to `KeyMatchStrategy.EXACT`, key matchers (`KeyRecordMatcher`, `FileKeyRecordMatcher`, `AvroKeyRecordMatcher`, `AvroFileKeyRecordMatcher`) and the fetch-time key filter (`KafkaRecordFetcher.passesKeyFilter()`) both delegate to `KeyMatchStrategy.matches(expected, actual)`. Available strategies: `EXACT`, `CONTAINS`, `STARTS_WITH`, `ENDS_WITH`, `REGEX`.

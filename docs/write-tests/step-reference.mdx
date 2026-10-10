@@ -207,8 +207,8 @@ Raw file match, full value equality.
 
 ```gherkin
 Then expected record from file
-  | topicAlias | file          | expectedRecordKey | consumerReadTimeout | consumerDeltaTime |
-  | orders-out | expected.json | key-001           | 30                  | 60                |
+  | topicAlias | file          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | expected.json | key-001           | exact            | 30                  | 60                |
 ```
 
 | Column | Type | Required | Default | Description |
@@ -216,6 +216,7 @@ Then expected record from file
 | `topicAlias` | `string` | ✅ | none | Output topic alias |
 | `file` | `string` | ✅ | none | Expected file path |
 | `expectedRecordKey` | `string` | ❌ | none | Filter by record key |
+| `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy: `exact`, `contains`, `starts_with`, `ends_with`, `regex` |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -247,8 +248,8 @@ Structural XML comparison with optional element exclusions.
 
 ```gherkin
 Then expected record from file based on XML
-  | topicAlias | file         | excludedElements    | expectedRecordKey |
-  | orders-out | expected.xml | ns:CreationDateTime |                   |
+  | topicAlias | file         | excludedElements    | expectedRecordKey | keyMatchStrategy |
+  | orders-out | expected.xml | ns:CreationDateTime |                   |                  |
 ```
 
 | Column | Type | Required | Default | Description |
@@ -257,6 +258,7 @@ Then expected record from file based on XML
 | `file` | `string` | ✅ | none | Expected XML file |
 | `excludedElements` | `string` | ❌ | none | Comma-separated element names to skip |
 | `expectedRecordKey` | `string` | ❌ | none | Filter by record key |
+| `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy: `exact`, `contains`, `starts_with`, `ends_with`, `regex` |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -286,8 +288,8 @@ Avro → JSON file match with optional field exclusions.
 
 ```gherkin
 Then expected record from file based on schema
-  | topicAlias | file          | excludedKeys      | expectedRecordKey | consumerReadTimeout |
-  | orders-out | expected.json | createdAt,eventId | ord-001           | 30                  |
+  | topicAlias | file          | excludedKeys      | expectedRecordKey | keyMatchStrategy | consumerReadTimeout |
+  | orders-out | expected.json | createdAt,eventId | ord-001           | exact            | 30                  |
 ```
 
 | Column | Type | Required | Default | Description |
@@ -296,6 +298,7 @@ Then expected record from file based on schema
 | `file` | `string` | ✅ | none | Expected JSON file |
 | `excludedKeys` | `string` | ❌ | none | Comma-separated Avro field names to exclude |
 | `expectedRecordKey` | `string` | ❌ | none | Filter by record key |
+| `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy: `exact`, `contains`, `starts_with`, `ends_with`, `regex` |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -382,14 +385,16 @@ Positive watcher, asserts at least one record is present.
 
 ```gherkin
 And record should appear in topic
-  | topicAlias | topicType | consumerReadTimeout | consumerDeltaTime |
-  | orders-out | raw       | 15                  | 60                |
+  | topicAlias | topicType | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | raw       | order-            | starts_with      | 15                  | 60                |
 ```
 
 | Column | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `topicAlias` | `string` | ✅ | none | Output topic alias |
 | `topicType` | `string` | ✅ | none | `raw` or `avro` |
+| `expectedRecordKey` | `string` | ❌ | none | Filter by record key |
+| `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy: `exact`, `contains`, `starts_with`, `ends_with`, `regex` |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -401,8 +406,8 @@ Negative watcher, asserts no record appears within the timeout.
 
 ```gherkin
 And record should not appear in topic
-  | topicAlias | topicType | consumerReadTimeout | consumerDeltaTime |
-  | orders-out | raw       | 10                  | 30                |
+  | topicAlias | topicType | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | raw       | non-existent      | exact            | 10                  | 30                |
 ```
 
 Same columns as `record should appear in topic`.
@@ -421,6 +426,46 @@ Same columns as `record should appear in topic`.
 | `expected records from files` (batch) | ✅ | ❌ |
 | `expected records from files based on schema` (batch) | ❌ | ✅ |
 | `record should (not) appear in topic` | ✅ both | ✅ both |
+
+---
+
+## Key matching strategies
+
+When a step includes an `expectedRecordKey` column, you can optionally specify a `keyMatchStrategy` column to control how the expected key is matched against the actual record key. This is useful when record keys are dynamically generated (UUIDs, prefixed keys, timestamps) and an exact match is too restrictive.
+
+| Strategy | DataTable value | Behaviour | Example |
+|---|---|---|---|
+| `EXACT` | `exact` | Exact string equality (default) | `"order-001"` matches `"order-001"` |
+| `CONTAINS` | `contains` | Expected key is a substring of the actual key | `"order"` matches `"order-001"` |
+| `STARTS_WITH` | `starts_with` | Actual key starts with the expected key | `"order-"` matches `"order-001"` |
+| `ENDS_WITH` | `ends_with` | Actual key ends with the expected key | `"001"` matches `"order-001"` |
+| `REGEX` | `regex` | Actual key matches the expected Java regex pattern | `"order-\\d+"` matches `"order-001"` |
+
+:::tip[Parsing]
+The `keyMatchStrategy` value is case-insensitive and tolerant of hyphens, underscores, and spaces. For example, `starts_with`, `starts-with`, `starts_with`, `StartsWith`, and `starts with` all resolve to `STARTS_WITH`. Unrecognised values default to `EXACT`.
+:::
+
+:::warning[Topic isolation]
+When using non-exact strategies (`contains`, `regex`, `starts_with`), ensure your match pattern is specific enough to uniquely identify the intended record. Kafka topics may contain records from prior scenarios in the same feature file, and a broad pattern (e.g. `contains "key"`) may match a decoy record first, causing value mismatches.
+:::
+
+### Example: matching a UUID-prefixed key
+
+```gherkin
+# Record key is "550e8400-e29b-41d4-a716-446655440000"
+Then expected record from file
+  | topicAlias | file          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout |
+  | orders-out | expected.json | 550e8400          | starts_with      | 30                  |
+```
+
+### Example: matching a dynamic key with regex
+
+```gherkin
+# Record key is "ORD-2026-000001"
+Then expected record from file
+  | topicAlias | file          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout |
+  | orders-out | expected.json | ORD-\d{4}-\d{6}   | regex            | 30                  |
+```
 
 ---
 
