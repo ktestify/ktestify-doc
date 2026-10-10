@@ -54,7 +54,29 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
-
+  plugins: [
+      [
+        '@stackql/docusaurus-plugin-aeo',
+        {
+          companions: { format: 'plain' },
+          llmsTxt: {
+            header:
+              'KTestify is a Kafka oriented testing framework. This corpus includes a complete KTestify Gherkin skill for deterministic test generation.',
+            include: [
+              '/docs/skills/gherkin/**',
+              '/docs/write-tests/**',
+              '/docs/getting-started/quick-start/**',
+            ],
+            fullTxt: {
+              include: ['docs'],
+              maxBytes: 10_000_000,
+            },
+          },
+          askAi: { enabled: false },
+          verbose: true,
+        },
+      ],
+  ],
   themeConfig: {
     // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
