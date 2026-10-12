@@ -65,6 +65,7 @@ const sidebars: SidebarsConfig = {
                 'write-tests/advanced/timeout-tuning',
                 'write-tests/advanced/batch-testing',
                 'write-tests/advanced/multi-row-datatables',
+                  'write-tests/advanced/feature-linting',
               ],
             },
           ],

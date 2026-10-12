@@ -1,0 +1,119 @@
+---
+sidebar_position: 4
+title: Feature Linting
+description: Lint your .feature files for formatting errors, undeclared aliases, and missing asset files before running them.
+---
+
+# Feature Linting
+
+KTestify ships a built-in linter for `.feature` files. It catches problems that Cucumber would only surface mid-run, or not at all: tabs instead of spaces, undeclared topic aliases, and asset files that do not exist on disk.
+
+Linting runs **before any Cucumber or plugin startup**, so it is fast enough for a pre-commit hook or a dedicated CI job.
+
+---
+
+## Running the linter
+
+### Docker image
+
+```bash
+docker run --rm \
+  -v "$PWD/features:/workspace/features" \
+  -v "$PWD/assets:/workspace/assets" \
+  ghcr.io/ktestify/ktestify-cucumber:latest \
+  lint /workspace/features \
+       --assets-dir /workspace/assets
+```
+
+### Fat JAR
+
+```bash
+java -jar ktestify-cucumber.jar lint features/
+```
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | No ERROR-severity violations |
+| `1` | At least one ERROR-severity violation (or warnings over `--max-warnings`) |
+| `2` | Usage error, or no `.feature` files found |
+
+---
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--format <fmt>` | `text` (default), `json`, or `codeclimate` (GitLab Code Quality) |
+| `--no-semantic` | Skip the domain rules (alias and file checks) |
+| `--no-file-check` | Skip on-disk asset file-existence checks (`D003`/`D004`) |
+| `--assets-subdir <name>` | Assets folder beside each feature file (default: `assets`) |
+| `--assets-dir <path>` | Absolute assets folder, overrides `--assets-subdir` |
+| `--disable <ids>` | Comma-separated rule ids to disable, e.g. `G013,G001` |
+| `--max-warnings <n>` | Fail (exit 1) if warnings exceed this count; `-1` = never |
+
+### GitLab Code Quality
+
+The `codeclimate` format emits the GitLab Code Quality JSON array. Pipe it to a file and expose it as a report artifact:
+
+```yaml
+lint-features:
+  script:
+    - docker run --rm -v "$PWD:/workspace" ghcr.io/ktestify/ktestify-cucumber:latest
+      lint /workspace/features --format codeclimate > gl-code-quality-report.json
+  artifacts:
+    reports:
+      codequality: gl-code-quality-report.json
+```
+
+---
+
+## Rules
+
+Structural rules (`G*`) check the Gherkin file itself. Domain rules (`D*`) check ktestify-specific semantics. Files that Cucumber cannot parse at all are reported through `G007`.
+
+### Structural rules
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `G001` | error | Tab character found; use spaces for indentation |
+| `G002` | warn | Trailing whitespace |
+| `G003` | warn | File does not end with a single newline |
+| `G004` | error | Exactly one Feature declaration is required per file |
+| `G005` | error | Feature has no name |
+| `G006` | error | Scenario has no name |
+| `G007` | warn | Line does not start with a recognised Gherkin keyword (includes parse errors) |
+| `G008` | error | Step keyword has no text |
+| `G009` | warn | Feature has no scenarios |
+| `G010` | error | Malformed table row: every row must start and end with `\|` |
+| `G011` | error | Table row column count does not match the header |
+| `G012` | warn | Unexpected indentation (two-space house style) |
+| `G013` | warn | More than one consecutive blank line |
+| `G014` | error | Table row is not attached to any step |
+| `G015` | error | Content appears before the Feature declaration |
+| `G016` | error | Step outside of a Background or Scenario |
+| `G017` | warn | Empty header cell in data table |
+
+### Domain rules
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `D001` | error | File value (a cell ending in a known extension) contains whitespace |
+| `D002` | error | `topicAlias` / `schemaAlias` / `namespaceAlias` used in a Scenario is not declared in any Background table |
+| `D003` | error | Referenced `file` / `files` value is missing from the assets folder |
+| `D004` | warn | Assets directory not found; file-existence checks skipped |
+
+Alias declaration is derived from the real step catalogue: the Background steps `namespace(s)`, `input topic`, `output topic`, and `schema(s)` declare the aliases that Scenarios may reference.
+
+---
+
+## Example output
+
+```text
+features/orders.feature
+  12:1  error  D002  'out' used as topicAlias is not declared in any Background input/output topic table.
+  18:1  error  D003  Referenced file 'expected.json' (column 'file') is missing from assets folder 'features/assets'.
+
+2 error(s), 0 warning(s)
+```
