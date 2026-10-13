@@ -205,7 +205,7 @@ Then expected record from file
 | HOCON key | Environment variable | Default | Description |
 |---|---|---|---|
 | `ktestify.framework.reporting.enabled` | none | `true` | Enable generation of the test report |
-| `ktestify.framework.reporting.format` | none | `html` | Report format: `html`, `json`, `cucumber` |
+| `ktestify.framework.reporting.format` | none | `["html"]` | Report formats to generate: `html`, `json`, `pretty`. Accepts a single value or an array, e.g. `["html", "json"]` |
 | `ktestify.framework.reporting.output` | `KTESTIFY_OUTPUT_DIR` | `src/target/reports/report.html` | Output path for the generated report |
 
 ---
@@ -310,4 +310,3 @@ docker run --rm \
 
   </TabItem>
 </Tabs>
-

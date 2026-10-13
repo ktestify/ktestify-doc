@@ -51,6 +51,7 @@ java -jar ktestify-cucumber.jar lint features/
 | `--assets-subdir <name>` | Assets folder beside each feature file (default: `assets`) |
 | `--assets-dir <path>` | Absolute assets folder, overrides `--assets-subdir` |
 | `--disable <ids>` | Comma-separated rule ids to disable, e.g. `G013,G001` |
+| `--ignore-tags <tags>` | Comma-separated tags to skip, e.g. `@WIP,@Skip` (`@` optional, alias `--ignore-tagged`). A tagged feature is skipped entirely; a tagged scenario (or rule) is excluded from the report |
 | `--max-warnings <n>` | Fail (exit 1) if warnings exceed this count; `-1` = never |
 
 ### GitLab Code Quality
