@@ -119,7 +119,19 @@ groups = [
 ]
 ```
 
-Scenarios that match no configured tag are placed in an automatic **Untagged** group.
+A group can require several tags at once with `tags` (AND logic). `tag = "x"` is equivalent to `tags = ["x"]`.
+
+```hocon
+groups = [
+  { tags = ["Intrazone", "NA"], label = "Intrazone NA", emoji = "🚛" },
+  { tags = ["Intrazone", "EU"], label = "Intrazone EU", emoji = "🚛" },
+  { tag  = "Interzone",         label = "Interzone",    emoji = "🚢" }
+]
+```
+
+Matching is case-insensitive and works with or without the leading `@`. The first matching group wins, so put more specific groups (more tags) before generic ones. In templates, `{{tag}}` renders the tags joined with `+` (e.g. `Intrazone+NA`).
+
+Scenarios that match no configured group are placed in an automatic **Untagged** group.
 
 ### `channels` List
 
