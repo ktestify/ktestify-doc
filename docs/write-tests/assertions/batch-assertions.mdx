@@ -6,7 +6,7 @@ description: Assert multiple Kafka records in a single step, raw and Avro batch 
 
 # Batch Assertions
 
-Batch steps consume multiple records from an output topic in a single step and match each one against a corresponding expected file. Records and files are matched **positionally** (record[0] → file[0], etc.).
+Batch steps consume multiple records from an output topic in a single step and match each one against a corresponding expected file. By default, records and files are matched **positionally** (`record[0]` matches `file[0]`, `record[1]` matches `file[1]`, and so on). You can set `batchMatchStrategy` to `lazy` for order-independent 1-to-1 matching without replacement.
 
 ---
 
@@ -14,8 +14,8 @@ Batch steps consume multiple records from an output topic in a single step and m
 
 ```gherkin
 Then expected records from files
-  | topicAlias | expectedRecordsCount | files                            | consumerReadTimeout |
-  | orders-out | 3                    | exp-1.json,exp-2.json,exp-3.json | 60                  |
+  | topicAlias | expectedRecordsCount | files                            | batchMatchStrategy | consumerReadTimeout |
+  | orders-out | 3                    | exp-1.json,exp-2.json,exp-3.json | positional         | 60                  |
 ```
 
 | Column | Type | Required | Description |
@@ -23,6 +23,9 @@ Then expected records from files
 | `topicAlias` | `string` | ✅ | Alias of a declared output topic |
 | `expectedRecordsCount` | `integer` | ✅ | Exact number of records to collect before asserting |
 | `files` | `string` | ✅ | Comma-separated list of expected file paths (relative to assets dir), one per record |
+| `batchMatchStrategy` | `string` | ❌ | How collected records are matched against `files`: `positional` (default) or `lazy` |
+| `expectedRecordKey` | `string` | ❌ | Optional key filter applied while collecting records |
+| `keyMatchStrategy` | `string` | ❌ | How `expectedRecordKey` is matched (`exact`, `contains`, `starts_with`, `ends_with`, `regex`) |
 | `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait for **all** records |
 | `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
 
@@ -32,8 +35,8 @@ Then expected records from files
 
 ```gherkin
 Then expected records from files based on schema
-  | topicAlias | expectedRecordsCount | files                    | excludedKeys |
-  | orders-out | 2                    | exp-1.json,exp-2.json    | ts,eventId   |
+  | topicAlias | expectedRecordsCount | files                    | excludedKeys | batchMatchStrategy |
+  | orders-out | 2                    | exp-1.json,exp-2.json    | ts,eventId   | lazy               |
 ```
 
 | Column | Type | Required | Description |
@@ -42,6 +45,9 @@ Then expected records from files based on schema
 | `expectedRecordsCount` | `integer` | ✅ | Exact number of records to collect |
 | `files` | `string` | ✅ | Comma-separated list of expected JSON file paths |
 | `excludedKeys` | `string` | ❌ | Comma-separated Avro field names to exclude from all records |
+| `batchMatchStrategy` | `string` | ❌ | How collected records are matched against `files`: `positional` (default) or `lazy` |
+| `expectedRecordKey` | `string` | ❌ | Optional key filter applied while collecting records |
+| `keyMatchStrategy` | `string` | ❌ | How `expectedRecordKey` is matched (`exact`, `contains`, `starts_with`, `ends_with`, `regex`) |
 | `consumerReadTimeout` | `integer` | ❌ | Max seconds to wait for all records |
 | `consumerDeltaTime` | `integer` | ❌ | How far back (seconds) to seek |
 
@@ -67,9 +73,21 @@ If you need several independent batches, or several unrelated single records aga
 
 ---
 
-## Ordering caveat
+## Batch matching strategies (`batchMatchStrategy`)
 
-Records are matched positionally in the order they are fetched from Kafka partitions. If your pipeline does not guarantee ordering (e.g. multiple partitions), use individual assertion steps per record with `expectedRecordKey` filtering instead.
+| Strategy | Accepted DataTable values | Behaviour |
+|---|---|---|
+| `POSITIONAL` | `positional`, `ordered`, `index`, `strict` | Default. Record at index `i` must match file at index `i`. |
+| `LAZY` | `lazy`, `fuzzy`, `unordered`, `any_order`, `any-order` | Order-independent 1-to-1 matching without replacement. Each consumed record claims the first unmatched expected file whose content matches. |
+
+```gherkin
+# Lazy / unordered: records arriving as (3, 1, 2) still match files listed as (1, 2, 3)
+Then expected records from files
+  | topicAlias | expectedRecordsCount | files                            | batchMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | 3                    | exp-1.json,exp-2.json,exp-3.json | lazy               | 30                  | 60                |
+```
+
+If your pipeline writes across multiple partitions and does not guarantee record order, set `batchMatchStrategy` to `lazy` (or use individual assertion steps per record with `expectedRecordKey` filtering).
 
 ---
 
@@ -80,4 +98,3 @@ Records are matched positionally in the order they are fetched from Kafka partit
 - [Batch testing guide →](../advanced/batch-testing)
 - [Timeout tuning →](../advanced/timeout-tuning)
 - [Multi-row DataTables →](../advanced/multi-row-datatables)
-

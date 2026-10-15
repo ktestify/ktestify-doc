@@ -35,17 +35,22 @@ Then expected records from files
 
 ```gherkin
 Then expected records from files based on schema
-  | topicAlias | expectedRecordsCount | files                 | excludedKeys | consumerReadTimeout |
-  | orders-out | 2                    | exp-1.json,exp-2.json | ts           | 60                  |
+  | topicAlias | expectedRecordsCount | files                 | excludedKeys | batchMatchStrategy | consumerReadTimeout |
+  | orders-out | 2                    | exp-1.json,exp-2.json | ts           | lazy               | 60                  |
 ```
 
 ---
 
-## Positional matching
+## Batch matching strategies: positional vs lazy
 
-Records and files are matched **by position** in the order they are fetched from Kafka. If you have multiple partitions, delivery order is not guaranteed.
+By default (`batchMatchStrategy = positional`), records and files are matched **by position** in the order they are fetched from Kafka (`record[0]` against `file[0]`, `record[1]` against `file[1]`, and so on).
 
-**For order-sensitive batch tests:** use a single-partition topic, or filter by `expectedRecordKey` in individual steps.
+When a topic has multiple partitions or an upstream pipeline emits records out of order, set `batchMatchStrategy` to `lazy` (aliases: `fuzzy`, `unordered`, `any-order`):
+
+- **Positional (`positional`, default):** requires a single-partition topic or deterministic emission order.
+- **Lazy (`lazy`):** performs order-independent 1-to-1 matching without replacement. Each consumed record is compared against all unclaimed expected files and claims the first file that matches. Duplicate records will not match the same expected file twice.
+
+Batch steps also support `expectedRecordKey` and `keyMatchStrategy` so the consumer only collects batch records whose keys match the filter.
 
 ---
 
@@ -74,4 +79,3 @@ Single-partition topics give deterministic ordering. Three-partition topics test
 - [Batch assertions →](../assertions/batch-assertions)
 - [Timeout tuning →](timeout-tuning)
 - [Multi-row DataTables →](multi-row-datatables)
-

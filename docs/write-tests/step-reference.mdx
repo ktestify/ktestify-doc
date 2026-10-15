@@ -340,12 +340,12 @@ Then expected record based on schema should have fields matching from given valu
 
 ### `Then expected records from files`
 
-Raw batch, collect N records and match positionally against N files.
+Raw batch, collect N records and match against N expected files (positionally by default, or in any order when `batchMatchStrategy` is `lazy`).
 
 ```gherkin
 Then expected records from files
-  | topicAlias | expectedRecordsCount | files                              | consumerReadTimeout |
-  | orders-out | 3                    | f1.json,f2.json,f3.json            | 60                  |
+  | topicAlias | expectedRecordsCount | files                              | batchMatchStrategy | consumerReadTimeout |
+  | orders-out | 3                    | f1.json,f2.json,f3.json            | positional         | 60                  |
 ```
 
 | Column | Type | Required | Default | Description |
@@ -353,6 +353,9 @@ Then expected records from files
 | `topicAlias` | `string` | ✅ | none | Output topic alias |
 | `expectedRecordsCount` | `integer` | ✅ | none | Exact number of records to collect |
 | `files` | `string` | ✅ | none | Comma-separated expected file paths |
+| `batchMatchStrategy` | `string` | ❌ | `positional` | Batch matching strategy (`positional`, `lazy`) |
+| `expectedRecordKey` | `string` | ❌ | none | Key filter applied while collecting batch records |
+| `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy (`exact`, `contains`, `starts_with`, `ends_with`, `regex`) |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait for all records |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -360,12 +363,12 @@ Then expected records from files
 
 ### `Then expected records from files based on schema`
 
-Avro batch, collect N Avro records and match positionally.
+Avro batch, collect N Avro records and match against N expected files (positionally by default, or in any order when `batchMatchStrategy` is `lazy`).
 
 ```gherkin
 Then expected records from files based on schema
-  | topicAlias | expectedRecordsCount | files                 | excludedKeys | consumerReadTimeout |
-  | orders-out | 2                    | exp-1.json,exp-2.json | ts,eventId   | 60                  |
+  | topicAlias | expectedRecordsCount | files                 | excludedKeys | batchMatchStrategy | consumerReadTimeout |
+  | orders-out | 2                    | exp-1.json,exp-2.json | ts,eventId   | lazy               | 60                  |
 ```
 
 | Column | Type | Required | Default | Description |
@@ -374,6 +377,9 @@ Then expected records from files based on schema
 | `expectedRecordsCount` | `integer` | ✅ | none | Exact number of records to collect |
 | `files` | `string` | ✅ | none | Comma-separated expected JSON file paths |
 | `excludedKeys` | `string` | ❌ | none | Avro field names to exclude from all records |
+| `batchMatchStrategy` | `string` | ❌ | `positional` | Batch matching strategy (`positional`, `lazy`) |
+| `expectedRecordKey` | `string` | ❌ | none | Key filter applied while collecting batch records |
+| `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy (`exact`, `contains`, `starts_with`, `ends_with`, `regex`) |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait for all records |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
 
@@ -465,6 +471,27 @@ Then expected record from file
 Then expected record from file
   | topicAlias | file          | expectedRecordKey | keyMatchStrategy | consumerReadTimeout |
   | orders-out | expected.json | ORD-\d{4}-\d{6}   | regex            | 30                  |
+```
+
+---
+
+## Batch matching strategies
+
+In batch assertion steps (`Then expected records from files` and `Then expected records from files based on schema`), the optional `batchMatchStrategy` column controls how collected records are compared against the comma-separated list of expected `files`:
+
+| Strategy | Accepted DataTable values | Behaviour |
+|---|---|---|
+| `POSITIONAL` | `positional`, `ordered`, `index`, `strict` | Default. Record at index `i` must match file at index `i`. |
+| `LAZY` | `lazy`, `fuzzy`, `unordered`, `any_order`, `any-order` | Order-independent 1-to-1 matching without replacement. Each consumed record claims the first unmatched expected file whose content matches. |
+
+:::tip[Parsing]
+The `batchMatchStrategy` value is case-insensitive and normalizes hyphens and spaces to underscores. Unrecognised or blank values default to `POSITIONAL`.
+:::
+
+```gherkin
+Then expected records from files
+  | topicAlias | expectedRecordsCount | files                              | batchMatchStrategy | consumerReadTimeout |
+  | orders-out | 3                    | f1.json,f2.json,f3.json            | lazy               | 30                  |
 ```
 
 ---

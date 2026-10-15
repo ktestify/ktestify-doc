@@ -57,6 +57,7 @@ public class MatchContext {
     String        matchKey;
     String        matchValue;
     KeyMatchStrategy keyMatchStrategy;  // defaults to EXACT, controls how expectedRecordKey is matched
+    BatchMatchStrategy batchMatchStrategy; // defaults to POSITIONAL, controls batch file matching order
     Map<String,String> expectedAttributes;  // since 1.1.1, defaults to emptyMap(), used by AttributeRecordMatcher
 
     // Convenience, for single-record matchers
@@ -70,6 +71,8 @@ public class MatchContext {
 `expectedAttributes` holds the key/value pairs to assert against a record's `attributes` map, for example `{"statusCode": "200"}`. It follows the same convention as `excludedFields`: both default to an empty collection rather than null, and matchers check `isEmpty()` instead of null. The default `buildMatchContext()` in `AbstractKafkaConsumer` sets `strictMatching` to `false` and leaves `matchKey`, `matchValue`, and `expectedAttributes` unset.
 
 `keyMatchStrategy` controls how `expectedRecordKey` is matched against the actual record key. It defaults to `KeyMatchStrategy.EXACT` for backward compatibility. Available strategies: `EXACT`, `CONTAINS`, `STARTS_WITH`, `ENDS_WITH`, `REGEX`. The strategy is applied at two layers: the fetch-time pre-filter in `KafkaRecordFetcher.passesKeyFilter()` (to skip non-matching records during polling) and the assertion-time key matchers (`KeyRecordMatcher`, `FileKeyRecordMatcher`, `AvroKeyRecordMatcher`, `AvroFileKeyRecordMatcher`).
+
+`batchMatchStrategy` controls how batch matchers (`FileRecordMatcher` and `AvroFileRecordMatcher`) compare multiple consumed records against `matchFilePaths`. It defaults to `BatchMatchStrategy.POSITIONAL` (`record[i]` must match `matchFilePaths.get(i)`). When set to `BatchMatchStrategy.LAZY`, records are matched against `matchFilePaths` in any order using 1-to-1 matching without replacement.
 
 ---
 
@@ -108,6 +111,7 @@ Key fields:
 | `excludedFields` | `List<String>` | Field names to ignore in comparison |
 | `expectedRecordKey` | `String` | Key filter, the record must match this key |
 | `keyMatchStrategy` | `KeyMatchStrategy` | How `expectedRecordKey` is matched: `EXACT` (default), `CONTAINS`, `STARTS_WITH`, `ENDS_WITH`, `REGEX` |
+| `batchMatchStrategy` | `BatchMatchStrategy` | How batch records are matched against `matchFilePaths`: `POSITIONAL` (default) or `LAZY` |
 | `readTimeout` | `long` | Milliseconds |
 | `consumerDeltaTime` | `long` | Milliseconds (DataTable seconds × 1000) |
 | `isBatchConsumer` | `boolean` | Enables batch fetch mode |

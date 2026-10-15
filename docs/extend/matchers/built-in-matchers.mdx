@@ -35,10 +35,11 @@ RecordMatcher<GenericRecord> avro = RecordMatcherFactory.forAvro("matchFile");
 
 ### `FileRecordMatcher`
 
-Compares the record value character-for-character against a file's content after dynamic variable resolution. Uses `StringDiffUtils` to produce a coloured ANSI diff on failure.
+Compares record values character-for-character against expected file content after dynamic variable resolution. Supports both single-record and multi-record batch matching (`POSITIONAL` and `LAZY` 1-to-1 matching without replacement). Uses `StringDiffUtils` to produce a coloured ANSI diff on failure.
 
-- **MatchContext fields used:** `matchFilePaths.get(0)`
+- **MatchContext fields used:** `matchFilePaths`, `batchMatchStrategy`
 - **On failure:** returns `MatchResult.fail(diff, expected, actual)`
+- **On count mismatch:** throws `ComparisonException` when `records.size() != matchFilePaths.size()`
 
 ---
 
@@ -108,9 +109,10 @@ All Avro matchers first deserialise the `GenericRecord` to a JSON `Map` via `Avr
 
 ### `AvroFileRecordMatcher`
 
-Avro equivalent of `FileRecordMatcher`. Converts `GenericRecord` → JSON string, excludes top-level keys in `excludedFields`, then compares against the expected file.
+Avro equivalent of `FileRecordMatcher`. Converts `GenericRecord` to a JSON string, excludes fields listed in `excludedFields`, then compares against the expected file(s). Supports both single-record and multi-record batch matching (`POSITIONAL` and `LAZY` 1-to-1 matching without replacement).
 
-- **MatchContext fields used:** `matchFilePaths.get(0)`, `excludedFields`
+- **MatchContext fields used:** `matchFilePaths`, `excludedFields`, `batchMatchStrategy`
+- **On count mismatch:** throws `ComparisonException` when `records.size() != matchFilePaths.size()`
 
 ---
 
@@ -135,8 +137,9 @@ Avro equivalent of `FieldsRecordMatcher`. Extracts a character range from the JS
 ## Key design rules
 
 1. `excludedFields` defaults to `Collections.emptyList()`, matchers check `isEmpty()`, never `null`.
-2. `matchFilePaths` is always a `List<String>`, single-record matchers use `get(0)`, batch matchers iterate by index.
+2. `matchFilePaths` is always a `List<String>`, single-record matchers use `getFirst()`, and batch matchers (`FileRecordMatcher`, `AvroFileRecordMatcher`) compare all records against `matchFilePaths` using `batchMatchStrategy` (`POSITIONAL` by default, or `LAZY` for unordered 1-to-1 matching).
 3. XML/XPath matchers throw `ConsumerException` when called via `RecordMatcherFactory.forAvro()`.
 4. `NoOpRecordMatcher` is the default when no match method is configured.
 5. `expectedAttributes` defaults to `Collections.emptyMap()`, `AttributeRecordMatcher` checks `isEmpty()`, never `null`, same convention as `excludedFields`.
 6. `keyMatchStrategy` defaults to `KeyMatchStrategy.EXACT`, key matchers (`KeyRecordMatcher`, `FileKeyRecordMatcher`, `AvroKeyRecordMatcher`, `AvroFileKeyRecordMatcher`) and the fetch-time key filter (`KafkaRecordFetcher.passesKeyFilter()`) both delegate to `KeyMatchStrategy.matches(expected, actual)`. Available strategies: `EXACT`, `CONTAINS`, `STARTS_WITH`, `ENDS_WITH`, `REGEX`.
+7. `batchMatchStrategy` defaults to `BatchMatchStrategy.POSITIONAL`. Available strategies: `POSITIONAL` and `LAZY`.
