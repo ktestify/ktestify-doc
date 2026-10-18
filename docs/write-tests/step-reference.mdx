@@ -354,7 +354,8 @@ Then expected records from files
 | `expectedRecordsCount` | `integer` | ✅ | none | Exact number of records to collect |
 | `files` | `string` | ✅ | none | Comma-separated expected file paths |
 | `batchMatchStrategy` | `string` | ❌ | `positional` | Batch matching strategy (`positional`, `lazy`) |
-| `expectedRecordKey` | `string` | ❌ | none | Key filter applied while collecting batch records |
+| `expectedRecordKeys` | `string` | ❌ | none | Comma-separated expected keys paired 1-to-1 with `files` (or a single key shared across all records in the batch), filtered during polling and asserted via `batchMatchStrategy` and `keyMatchStrategy` |
+| `expectedRecordKey` | `string` | ❌ | none | Single key filter applied while collecting batch records |
 | `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy (`exact`, `contains`, `starts_with`, `ends_with`, `regex`) |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait for all records |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
@@ -378,7 +379,8 @@ Then expected records from files based on schema
 | `files` | `string` | ✅ | none | Comma-separated expected JSON file paths |
 | `excludedKeys` | `string` | ❌ | none | Avro field names to exclude from all records |
 | `batchMatchStrategy` | `string` | ❌ | `positional` | Batch matching strategy (`positional`, `lazy`) |
-| `expectedRecordKey` | `string` | ❌ | none | Key filter applied while collecting batch records |
+| `expectedRecordKeys` | `string` | ❌ | none | Comma-separated expected keys paired 1-to-1 with `files` (or a single key shared across all records in the batch), filtered during polling and asserted via `batchMatchStrategy` and `keyMatchStrategy` |
+| `expectedRecordKey` | `string` | ❌ | none | Single key filter applied while collecting batch records |
 | `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy (`exact`, `contains`, `starts_with`, `ends_with`, `regex`) |
 | `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait for all records |
 | `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
@@ -481,8 +483,8 @@ In batch assertion steps (`Then expected records from files` and `Then expected 
 
 | Strategy | Accepted DataTable values | Behaviour |
 |---|---|---|
-| `POSITIONAL` | `positional`, `ordered`, `index`, `strict` | Default. Record at index `i` must match file at index `i`. |
-| `LAZY` | `lazy`, `fuzzy`, `unordered`, `any_order`, `any-order` | Order-independent 1-to-1 matching without replacement. Each consumed record claims the first unmatched expected file whose content matches. |
+| `POSITIONAL` | `positional`, `ordered`, `index`, `strict` | Default. Record at index `i` must match file at index `i` (and `expectedRecordKeys[i]` when set). |
+| `LAZY` | `lazy`, `fuzzy`, `unordered`, `any_order`, `any-order` | Order-independent 1-to-1 matching without replacement. Each consumed record claims the first unmatched expected file (and corresponding `expectedRecordKeys[j]` when set) whose content and key match. |
 
 :::tip[Parsing]
 The `batchMatchStrategy` value is case-insensitive and normalizes hyphens and spaces to underscores. Unrecognised or blank values default to `POSITIONAL`.

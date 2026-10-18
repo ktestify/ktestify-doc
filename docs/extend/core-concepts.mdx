@@ -55,9 +55,10 @@ public class MatchContext {
     List<String>  excludedFields;    // defaults to emptyList()
     boolean       strictMatching;
     String        matchKey;
+    List<String>  matchKeys;         // defaults to emptyList(), expected keys for batch matching
     String        matchValue;
-    KeyMatchStrategy keyMatchStrategy;  // defaults to EXACT, controls how expectedRecordKey is matched
-    BatchMatchStrategy batchMatchStrategy; // defaults to POSITIONAL, controls batch file matching order
+    KeyMatchStrategy keyMatchStrategy;  // defaults to EXACT, controls how expectedRecordKey(s) are matched
+    BatchMatchStrategy batchMatchStrategy; // defaults to POSITIONAL, controls batch file/key matching order
     Map<String,String> expectedAttributes;  // since 1.1.1, defaults to emptyMap(), used by AttributeRecordMatcher
 
     // Convenience, for single-record matchers

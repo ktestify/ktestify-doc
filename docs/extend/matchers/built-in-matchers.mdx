@@ -37,7 +37,7 @@ RecordMatcher<GenericRecord> avro = RecordMatcherFactory.forAvro("matchFile");
 
 Compares record values character-for-character against expected file content after dynamic variable resolution. Supports both single-record and multi-record batch matching (`POSITIONAL` and `LAZY` 1-to-1 matching without replacement). Uses `StringDiffUtils` to produce a coloured ANSI diff on failure.
 
-- **MatchContext fields used:** `matchFilePaths`, `batchMatchStrategy`
+- **MatchContext fields used:** `matchFilePaths`, `matchKeys`, `keyMatchStrategy`, `batchMatchStrategy`
 - **On failure:** returns `MatchResult.fail(diff, expected, actual)`
 - **On count mismatch:** throws `ComparisonException` when `records.size() != matchFilePaths.size()`
 
@@ -111,7 +111,7 @@ All Avro matchers first deserialise the `GenericRecord` to a JSON `Map` via `Avr
 
 Avro equivalent of `FileRecordMatcher`. Converts `GenericRecord` to a JSON string, excludes fields listed in `excludedFields`, then compares against the expected file(s). Supports both single-record and multi-record batch matching (`POSITIONAL` and `LAZY` 1-to-1 matching without replacement).
 
-- **MatchContext fields used:** `matchFilePaths`, `excludedFields`, `batchMatchStrategy`
+- **MatchContext fields used:** `matchFilePaths`, `matchKeys`, `keyMatchStrategy`, `excludedFields`, `batchMatchStrategy`
 - **On count mismatch:** throws `ComparisonException` when `records.size() != matchFilePaths.size()`
 
 ---

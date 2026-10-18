@@ -47,10 +47,10 @@ By default (`batchMatchStrategy = positional`), records and files are matched **
 
 When a topic has multiple partitions or an upstream pipeline emits records out of order, set `batchMatchStrategy` to `lazy` (aliases: `fuzzy`, `unordered`, `any-order`):
 
-- **Positional (`positional`, default):** requires a single-partition topic or deterministic emission order.
-- **Lazy (`lazy`):** performs order-independent 1-to-1 matching without replacement. Each consumed record is compared against all unclaimed expected files and claims the first file that matches. Duplicate records will not match the same expected file twice.
+- **Positional (`positional`, default):** requires a single-partition topic or deterministic emission order. Record `i` must match `files[i]` (and `expectedRecordKeys[i]` if provided).
+- **Lazy (`lazy`):** performs order-independent 1-to-1 matching without replacement. Each consumed record is compared against all unclaimed expected files (and corresponding `expectedRecordKeys` entries if provided) and claims the first one that matches. Duplicate records will not match the same expected file twice.
 
-Batch steps also support `expectedRecordKey` and `keyMatchStrategy` so the consumer only collects batch records whose keys match the filter.
+Batch steps also support `expectedRecordKeys` (comma-separated, one key per expected file in `files`), `expectedRecordKey` (single filter for all records), and `keyMatchStrategy` so the consumer only collects batch records whose keys match and asserts each record's key alongside its value.
 
 ---
 

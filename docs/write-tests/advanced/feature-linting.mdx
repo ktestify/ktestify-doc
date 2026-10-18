@@ -46,7 +46,7 @@ java -jar ktestify-cucumber.jar lint features/
 | Option | Description |
 |--------|-------------|
 | `--format <fmt>` | `text` (default), `json`, or `codeclimate` (GitLab Code Quality) |
-| `--no-semantic` | Skip the domain rules (alias and file checks) |
+| `--no-semantic` | Skip the domain rules (alias, file, and step definition checks) |
 | `--no-file-check` | Skip on-disk asset file-existence checks (`D003`/`D004`) |
 | `--assets-subdir <name>` | Assets folder beside each feature file (default: `assets`) |
 | `--assets-dir <path>` | Absolute assets folder, overrides `--assets-subdir` |
@@ -104,6 +104,7 @@ Structural rules (`G*`) check the Gherkin file itself. Domain rules (`D*`) check
 | `D002` | error | `topicAlias` / `schemaAlias` / `namespaceAlias` used in a Scenario is not declared in any Background table |
 | `D003` | error | Referenced `file` / `files` value is missing from the assets folder |
 | `D004` | warn | Assets directory not found; file-existence checks skipped |
+| `D005` | error | Undefined step: no matching step definition in `ktestify-cucumber` or its plugins |
 
 Alias declaration is derived from the real step catalogue: the Background steps `namespace(s)`, `input topic`, `output topic`, and `schema(s)` declare the aliases that Scenarios may reference.
 
