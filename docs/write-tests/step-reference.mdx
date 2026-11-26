@@ -162,6 +162,24 @@ When record from file based on schema is sent
 
 ---
 
+### `When tombstone record is sent`
+
+Produces a Kafka tombstone record (`null` value) to a Kafka input topic. Works for both raw and Avro topics because a tombstone carries `null` value bytes on the wire without requiring Schema Registry.
+
+```gherkin
+When tombstone record is sent
+  | topicAlias | recordKey | headerFile   |
+  | orders-in  | ord-001   | headers.json |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` / `topicName` | `string` | ✅ | none | Input topic alias or name (must be declared as INPUT) |
+| `recordKey` | `string` | ✅ | none | Kafka record key (must be non-blank) |
+| `headerFile` | `string` | ❌ | none | JSON file of Kafka headers `{"name":"value"}` |
+
+---
+
 ### `And wait for {int} seconds`
 
 Pauses execution.
@@ -422,6 +440,26 @@ Same columns as `record should appear in topic`.
 
 ---
 
+### `Then expected tombstone record`
+
+Asserts that a Kafka tombstone record (`null` value) arrives on an output topic, optionally matching its key. Works for both raw and Avro topics without requiring Schema Registry. If a non-tombstone record arrives first for the matching key, the assertion fails fast.
+
+```gherkin
+Then expected tombstone record
+  | topicAlias | expectedRecordKey | keyMatchStrategy | consumerReadTimeout | consumerDeltaTime |
+  | orders-out | ord-001           | exact            | 30                  | 60                |
+```
+
+| Column | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `topicAlias` / `topicName` | `string` | ✅ | none | Output topic alias or name |
+| `expectedRecordKey` | `string` | ❌ | none | Filter and assert the tombstone record key |
+| `keyMatchStrategy` | `string` | ❌ | `exact` | Key matching strategy: `exact`, `contains`, `starts_with`, `ends_with`, `regex` |
+| `consumerReadTimeout` | `integer` | ❌ | Config (30) | Seconds to wait |
+| `consumerDeltaTime` | `integer` | ❌ | Config (60) | Seconds to seek back |
+
+---
+
 ## Matcher × Topic type compatibility
 
 | Matcher step | `raw` topics | `avro` topics |
@@ -433,6 +471,7 @@ Same columns as `record should appear in topic`.
 | `expected record based on schema / field value` | ❌ | ✅ |
 | `expected records from files` (batch) | ✅ | ❌ |
 | `expected records from files based on schema` (batch) | ❌ | ✅ |
+| `expected tombstone record` | ✅ both | ✅ both |
 | `record should (not) appear in topic` | ✅ both | ✅ both |
 
 ---

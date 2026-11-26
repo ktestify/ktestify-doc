@@ -144,6 +144,14 @@ const config: Config = {
               label: 'ktestify-plugin-azureblob',
               href: 'https://github.com/ktestify/ktestify-plugin-azureblob',
             },
+            {
+              label: 'ktestify-plugin-http',
+              href: 'https://github.com/ktestify/ktestify-plugin-http',
+            },
+            {
+              label: 'ktestify-plugin-notifications',
+              href: 'https://github.com/ktestify/ktestify-plugin-notifications',
+            }
           ],
         },
         {

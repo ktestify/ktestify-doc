@@ -18,25 +18,25 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@docusaurus/core": "3.10.1",
-    "@docusaurus/faster": "3.10.1",
-    "@docusaurus/preset-classic": "3.10.1",
-    "@docusaurus/theme-mermaid": "^3.10.1",
-    "@icons-pack/react-simple-icons": "^13.13.0",
-    "@mdx-js/react": "^3.0.0",
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/faster": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "@docusaurus/theme-mermaid": "^3.10.2",
+    "@icons-pack/react-simple-icons": "^13.16.0",
+    "@mdx-js/react": "^3.1.1",
     "@mermaid-js/layout-elk": "^0.1.9",
-    "@stackql/docusaurus-plugin-aeo": "^0.5.0",
-    "clsx": "^2.0.0",
-    "lucide-react": "^1.16.0",
-    "prism-react-renderer": "^2.3.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "@stackql/docusaurus-plugin-aeo": "^0.5.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.80.0",
+    "prism-react-renderer": "^2.4.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.10.1",
-    "@docusaurus/tsconfig": "3.10.1",
-    "@docusaurus/types": "3.10.1",
-    "@types/react": "^19.2.15",
+    "@docusaurus/module-type-aliases": "^3.10.2",
+    "@docusaurus/tsconfig": "^3.10.2",
+    "@docusaurus/types": "^3.10.2",
+    "@types/react": "^19.3.3",
     "typescript": "~6.0.2"
   },
   "browserslist": {
@@ -53,5 +53,9 @@
   },
   "engines": {
     "node": ">=20.0"
+  },
+  "allowScripts": {
+    "@swc/core@1.16.22": true,
+    "core-js@3.51.0": true
   }
 }

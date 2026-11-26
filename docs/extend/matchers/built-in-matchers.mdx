@@ -21,6 +21,7 @@ KTestify ships 12 `RecordMatcher<V>` implementations, split into raw (String) an
 | `methodMatchXPath` | `XPathRecordMatcher` | ❌ `ConsumerException` |
 | `methodRecordKeyMatch` | `KeyRecordMatcher` | `AvroKeyRecordMatcher` |
 | `methodMatchAttributes` | `AttributeRecordMatcher<V>` | ❌ `ConsumerException` |
+| `methodMatchTombstone` | `TombstoneRecordMatcher<V>` | `TombstoneRecordMatcher<V>` |
 | `null` / blank | `NoOpRecordMatcher<V>` | `NoOpRecordMatcher<V>` |
 
 ```java
@@ -100,6 +101,16 @@ Generic, transport agnostic matcher introduced alongside `RequestResponseClient<
 - **On empty `expectedAttributes`:** returns `MatchResult.pass()` immediately, nothing to assert
 - **Typical use:** HTTP status code assertions (`{"statusCode": "200"}`), reusable later by any future transport that populates `attributes` (gRPC status, MQ reason code, script exit code)
 - **Not available for Avro**, `attributes` is populated by synchronous request/response clients, not Avro consumers
+
+---
+
+### `TombstoneRecordMatcher<V>` (`1.2.11`)
+
+Generic, transport-agnostic matcher that asserts the consumed record is a tombstone (`getValue() == null`). Works for both raw (`String`) and Avro (`GenericRecord`) records.
+
+- **MatchContext fields used:** `matchKey` (optional), `keyMatchStrategy` (defaults to `EXACT`)
+- **Matching rule:** fails immediately if `getValue() != null`; when `matchKey` is non-blank, also asserts the record key using `keyMatchStrategy`
+- **Available for both raw and Avro** via `RecordMatcherFactory.METHOD_MATCH_TOMBSTONE` (`methodMatchTombstone`)
 
 ---
 
